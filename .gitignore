@@ -20,6 +20,10 @@ Thumbs.db
 .env.development
 .env.production
 
+# Agent skills (dev tooling)
+.agents/
+skills-lock.json
+
 # Logs
 *.log
 npm-debug.log*
