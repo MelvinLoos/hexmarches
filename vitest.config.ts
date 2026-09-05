@@ -1,6 +1,8 @@
 import { defineConfig } from 'vitest/config'
 import { resolve } from 'node:path'
 
+const srcDir = resolve(__dirname, 'src')
+
 export default defineConfig({
   test: {
     globals: true,
@@ -10,8 +12,8 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '~': resolve(__dirname, './src'),
-      '@': resolve(__dirname, './src'),
+      '~': srcDir,
+      '@': srcDir,
     },
   },
 })
