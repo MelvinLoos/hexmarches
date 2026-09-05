@@ -24,9 +24,6 @@ Thumbs.db
 .agents/
 skills-lock.json
 
-# MCP server config (contains OAuth tokens after authentication)
-.mcp.json
-
 # Logs
 *.log
 npm-debug.log*
