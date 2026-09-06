@@ -34,9 +34,13 @@ test('Create this page navigates to editor without 404', async ({ page }) => {
 
   // Should land on the editor page
   await page.waitForURL('**/dm/wiki/edit', { timeout: 10000 })
-  
-  // The page should at minimum show the edit page title
-  await expect(page.locator('.page-title')).toBeVisible({ timeout: 10000 })
+
+  // CRITICAL: Assert the actual md-editor-v3 DOM is rendered (not just .page-title)
+  // md-editor-v3 renders a .md-editor container with toolbar and textarea
+  await expect(page.locator('.md-editor')).toBeVisible({ timeout: 15000 })
+
+  // Verify the save button is also present (proves full component tree loaded)
+  await expect(page.getByTestId('wiki-save')).toBeVisible({ timeout: 5000 })
 
   // No 404 or Vue Router errors
   const relevantErrors = consoleErrors.filter(e => e.includes('404') || e.includes('No match found'))

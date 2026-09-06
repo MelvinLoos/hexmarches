@@ -9,17 +9,21 @@ export default defineNuxtConfig({
     '@vite-pwa/nuxt',
   ],
 
+  // ── Component auto-imports ─────────────────────────────────────────
+  // Nuxt auto-scans components/ by default; we extend it to include
+  // our Clean Architecture presentation layer under src/presentation/components.
+  components: [
+    { path: '~/src/presentation/components', pathPrefix: false },
+    { path: '~/components', pathPrefix: false },
+  ],
+
   // ── Runtime config (auto-injected by @nuxtjs/supabase from env) ──
   runtimeConfig: {
     supabase: {
-      // Server-only: service role key for admin operations
       serviceKey: '',
     },
     public: {
-      supabase: {
-        // URL and key are injected by @nuxtjs/supabase module defaults
-        // from process.env.SUPABASE_URL / SUPABASE_KEY
-      },
+      supabase: {},
     },
   },
 
