@@ -82,6 +82,10 @@ export class WikiService {
   }
 
   async getNodeTree(path: string): Promise<WikiNode[]> {
+    // Allow empty string to fetch all nodes (used by sidebar/parent selector)
+    if (path === '') {
+      return this.repo.getDescendants('')
+    }
     // Validate path before querying
     if (!validateLtreePath(path)) {
       throw new LtreeValidationError(path)

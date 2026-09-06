@@ -76,6 +76,45 @@ export class LtreeValidationError extends Error {
     this.name = 'LtreeValidationError'
   }
 }
+// ─── Title Slugification ─────────────────────────────────────────────
+// Converts human-readable titles into valid ltree segments.
+// Pure domain logic — no framework dependencies.
+
+/**
+ * Converts a human-readable title into a valid ltree segment.
+ * - Lowercases
+ * - Replaces non-alphanumeric chars (except underscores) with underscores
+ * - Collapses consecutive underscores
+ * - Trims leading/trailing underscores
+ *
+ * @param title - Raw human-readable title (e.g. "The Harpers!")
+ * @returns A valid ltree segment (e.g. "the_harpers")
+ */
+export function slugifyTitle(title: string): string {
+  // Lowercase
+  let slug = title.toLowerCase()
+  // Replace any non-alphanumeric, non-underscore character with underscore
+  slug = slug.replace(/[^a-z0-9_]/g, '_')
+  // Collapse consecutive underscores
+  slug = slug.replace(/_+/g, '_')
+  // Strip leading/trailing underscores
+  slug = slug.replace(/^_+|_+$/g, '')
+  return slug
+}
+
+/**
+ * Generates a full ltree child path from a parent path and title.
+ * If the parent path is empty, returns just the slugified title.
+ *
+ * @param parentPath - The parent ltree path (e.g. "campaign.factions") or empty string
+ * @param title - Raw human-readable title for the child node
+ * @returns The full ltree path for the child node
+ */
+export function generateChildPath(parentPath: string, title: string): string {
+  const slug = slugifyTitle(title)
+  if (!parentPath) return slug
+  return `${parentPath}.${slug}`
+}
 
 // ─── Factory ────────────────────────────────────────────────────────
 

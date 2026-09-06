@@ -5,6 +5,8 @@ import {
   type WikiNode,
   createWikiNode,
   LtreeValidationError,
+  slugifyTitle,
+  generateChildPath,
 } from '~/src/core/domain/wiki-node'
 
 // ─── Issue #10: Task 1 — Wiki Node Entities & Ltree Validation ──────
@@ -277,6 +279,60 @@ describe('Issue #10: Domain Layer — Wiki Node Entities & Ltree Validation', ()
       expect(mod.validateLtreePath).toBeDefined()
       expect(mod.isValidLtreeSegment).toBeDefined()
       expect(mod.createWikiNode).toBeDefined()
+    })
+  })
+
+  // ─── Issue #24: Task 1 — Path Generator (slugifyTitle + generateChildPath)
+  describe('slugifyTitle()', () => {
+    it('should lowercase and replace spaces with underscores', () => {
+      expect(slugifyTitle('The Harpers')).toBe('the_harpers')
+    })
+
+    it('should strip exclamation marks and other punctuation', () => {
+      expect(slugifyTitle('The Harpers!')).toBe('the_harpers')
+    })
+
+    it('should collapse multiple consecutive underscores', () => {
+      expect(slugifyTitle('  Hello   World  ')).toBe('hello_world')
+    })
+
+    it('should strip leading and trailing underscores', () => {
+      expect(slugifyTitle('___leading_trailing___')).toBe('leading_trailing')
+    })
+
+    it('should handle uppercase, symbols, and mixed content', () => {
+      expect(slugifyTitle('UPPER Case & Symbols@#$')).toBe('upper_case_symbols')
+    })
+
+    it('should handle already-valid ltree segments', () => {
+      expect(slugifyTitle('valid_path_already')).toBe('valid_path_already')
+    })
+
+    it('should handle empty string', () => {
+      expect(slugifyTitle('')).toBe('')
+    })
+
+    it('should handle numbers-only titles', () => {
+      expect(slugifyTitle('123')).toBe('123')
+    })
+  })
+
+  describe('generateChildPath()', () => {
+    it('should append slugified title to parent path', () => {
+      expect(generateChildPath('campaign.factions', 'The Harpers!'))
+        .toBe('campaign.factions.the_harpers')
+    })
+
+    it('should return just the slugified title when parent is empty', () => {
+      expect(generateChildPath('', 'Root Node')).toBe('root_node')
+    })
+
+    it('should handle single-segment parent path', () => {
+      expect(generateChildPath('root', 'valid-title')).toBe('root.valid_title')
+    })
+
+    it('should handle deep nested parent paths', () => {
+      expect(generateChildPath('a.b.c.d', 'New Child')).toBe('a.b.c.d.new_child')
     })
   })
 })
