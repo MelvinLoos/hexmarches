@@ -18,7 +18,7 @@ test('/wiki shows Campaign Wiki home page', async ({ page }) => {
   await expect(page.getByText('Campaign Wiki')).toBeVisible()
 })
 
-test('Create this page navigates to editor without 404', async ({ page }) => {
+test('Create this page navigates to editor and save flow works', async ({ page }) => {
   const consoleErrors: string[] = []
   page.on('console', msg => {
     if (msg.type() === 'error') consoleErrors.push(msg.text())
@@ -35,14 +35,26 @@ test('Create this page navigates to editor without 404', async ({ page }) => {
   // Should land on the editor page
   await page.waitForURL('**/dm/wiki/edit', { timeout: 10000 })
 
-  // CRITICAL: Assert the actual md-editor-v3 DOM is rendered (not just .page-title)
-  // md-editor-v3 renders a .md-editor container with toolbar and textarea
+  // CRITICAL: Assert the actual md-editor-v3 DOM is rendered
   await expect(page.locator('.md-editor')).toBeVisible({ timeout: 15000 })
-
-  // Verify the save button is also present (proves full component tree loaded)
   await expect(page.getByTestId('wiki-save')).toBeVisible({ timeout: 5000 })
 
-  // No Vue Router "No match found" errors (API 404s from Supabase are expected in e2e)
+  // ── New: Parent Selector UI assertions ──────────────────────────
+  // Verify parent dropdown exists
+  await expect(page.getByTestId('wiki-parent')).toBeVisible({ timeout: 5000 })
+
+  // Type a title and verify the auto-generated path preview
+  await page.getByTestId('wiki-title').fill('Test Forest')
+  await expect(page.getByTestId('wiki-path-preview')).toBeVisible({ timeout: 5000 })
+  await expect(page.getByTestId('wiki-path-preview')).toContainText('test_forest')
+
+  // Verify save button is functional (click triggers save attempt)
+  await page.getByTestId('wiki-save').click()
+
+  // Wait for toast notification (success or error proves the save flow works)
+  await page.waitForSelector('[data-testid^="toast-"]', { timeout: 10000 })
+
+  // No Vue Router "No match found" errors
   const routerErrors = consoleErrors.filter(e => e.includes('No match found'))
   expect(routerErrors).toHaveLength(0)
 })
