@@ -89,7 +89,8 @@ describe('Issue #3: Domain Layer — VTT Payload & Hex Math Definitions', () => 
         expect(hexDistance(center, n)).toBe(1)
       }
     })
-// ─── VTT Payload Types ───────────────────────────────────────────
+  })
+  // ─── VTT Payload Types ───────────────────────────────────────────
   describe('VttPayloadType', () => {
     it('should enumerate payload kinds', () => {
       expect(VttPayloadType.TRANSFORM).toBe('transform')
@@ -184,8 +185,6 @@ describe('Issue #3: Domain Layer — VTT Payload & Hex Math Definitions', () => 
       expect(mod.createVttPayload).toBeDefined()
     })
   })
-})
-  })
 
   describe('hexEquals()', () => {
     it('should return true for identical coordinates', () => {
@@ -207,3 +206,4 @@ describe('Issue #3: Domain Layer — VTT Payload & Hex Math Definitions', () => 
       expect(hexToKey(createHexCoord(0, 0))).not.toBe(hexToKey(createHexCoord(0, 1)))
     })
   })
+})
