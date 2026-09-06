@@ -3,46 +3,43 @@ import { createSupabaseAdapter, SupabaseAdapter } from '~/infrastructure/supabas
 import { useAuth, AuthState } from '~/infrastructure/supabase/auth'
 
 // Mock @supabase/supabase-js to avoid real network calls
-vi.mock('@supabase/supabase-js', () => {
-  const mockSupabase = {
-    auth: {
-      signInWithPassword: vi.fn(),
-      signUp: vi.fn(),
-      signOut: vi.fn(),
-      getSession: vi.fn(),
-      onAuthStateChange: vi.fn(),
-    },
-    from: vi.fn(() => ({
-      select: vi.fn(() => ({ eq: vi.fn() })),
-      insert: vi.fn(),
-      update: vi.fn(),
-      delete: vi.fn(),
-    })),
-    channel: vi.fn(() => ({
-      on: vi.fn(() => ({ subscribe: vi.fn() })),
-    })),
-  }
+// (the adapter no longer calls createClient itself,
+// but the mock is kept in case other modules use it)
+vi.mock('@supabase/supabase-js', () => ({
+  createClient: vi.fn(),
+}))
 
-  return {
-    createClient: vi.fn(() => mockSupabase),
-  }
-})
+const mockSupabase = {
+  auth: {
+    signInWithPassword: vi.fn(),
+    signUp: vi.fn(),
+    signOut: vi.fn(),
+    getSession: vi.fn(),
+    onAuthStateChange: vi.fn(),
+  },
+  from: vi.fn(() => ({
+    select: vi.fn(() => ({ eq: vi.fn() })),
+    insert: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+  })),
+  channel: vi.fn(() => ({
+    on: vi.fn(() => ({ subscribe: vi.fn() })),
+  })),
+}
 
 describe('Issue #4: Infrastructure — Supabase Adapters & Auth', () => {
   let adapter: SupabaseAdapter
 
   beforeEach(() => {
-    adapter = createSupabaseAdapter({
-      supabaseUrl: 'https://test.supabase.co',
-      supabaseKey: 'test-anon-key',
-    })
+    adapter = createSupabaseAdapter(mockSupabase as any)
   })
 
   // ─── Adapter Initialization ──────────────────────────────────────
   describe('SupabaseAdapter', () => {
-    it('should create an adapter with url and key', () => {
+    it('should create an adapter with a SupabaseClient', () => {
       expect(adapter).toBeDefined()
-      expect(adapter.url).toBe('https://test.supabase.co')
+      expect(adapter.client).toBe(mockSupabase)
     })
 
     it('should expose the supabase client', () => {

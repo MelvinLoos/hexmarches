@@ -2,20 +2,15 @@
 // Thin wrapper around @supabase/supabase-js
 // No domain logic — pure infrastructure concerns
 
-import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
-export interface SupabaseAdapterConfig {
-  supabaseUrl: string
-  supabaseKey: string
-}
+export { SupabaseClient }
 
 export class SupabaseAdapter {
-  public readonly url: string
   public readonly client: SupabaseClient
 
-  constructor(config: SupabaseAdapterConfig) {
-    this.url = config.supabaseUrl
-    this.client = createClient(config.supabaseUrl, config.supabaseKey)
+  constructor(client: SupabaseClient) {
+    this.client = client
   }
 
   from(table: string) {
@@ -27,6 +22,6 @@ export class SupabaseAdapter {
   }
 }
 
-export function createSupabaseAdapter(config: SupabaseAdapterConfig): SupabaseAdapter {
-  return new SupabaseAdapter(config)
+export function createSupabaseAdapter(client: SupabaseClient): SupabaseAdapter {
+  return new SupabaseAdapter(client)
 }
