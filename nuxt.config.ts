@@ -1,5 +1,3 @@
-import { remarkWikiLinks } from './src/presentation/markdown/remark-wikilinks'
-
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: '2025-09-05',
@@ -39,8 +37,8 @@ export default defineNuxtConfig({
       map: {},
     },
     remarkPlugins: {
-      wikiLinks: {
-        instance: remarkWikiLinks,
+      'remark-wikilinks': {
+        src: './src/presentation/markdown/remark-wikilinks',
       },
     },
   },

@@ -8,7 +8,7 @@
 
 import { visit, type Visitor } from 'unist-util-visit'
 import type { Root, Text, Link, Paragraph } from 'mdast'
-import { slugifyTitle } from '~/src/core/domain/wiki-node'
+import { slugifyTitle } from '../../core/domain/wiki-node'
 
 // Regex to match [[Node Title]] patterns
 const WIKI_LINK_RE = /\[\[([^\]]+)\]\]/g
@@ -75,3 +75,6 @@ export function remarkWikiLinks() {
     })
   }
 }
+
+// Default export for @nuxtjs/mdc remarkPlugins compatibility
+export default remarkWikiLinks
