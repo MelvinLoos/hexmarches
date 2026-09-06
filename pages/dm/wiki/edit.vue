@@ -1,17 +1,14 @@
 <template>
   <div class="dm-wiki-edit-page">
     <h1 class="page-title">Edit Wiki Node</h1>
-    <GmWikiEditor
-      @save="handleSave"
-    />
+    <GmWikiEditor @save="handleSave" />
   </div>
 </template>
 
 <script setup lang="ts">
-import GmWikiEditor from '~/presentation/components/GmWikiEditor.vue'
+import GmWikiEditor from '../../../src/presentation/components/GmWikiEditor.client.vue'
 
 function handleSave(payload: { title: string; content: string; path: string }) {
-  // Will be connected to WikiService in the full integration
   console.log('Save wiki node:', payload)
 }
 </script>
