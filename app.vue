@@ -23,6 +23,26 @@
   </div>
 </template>
 
+<script setup lang="ts">
+import { onErrorCaptured } from 'vue'
+
+// Silence meermaid SVG NaN coordinate errors from md-editor-v3 initialization.
+// mermaid fires its SVG renderer on mount with empty content, producing harmless
+// "<line> attribute x1/x2: Expected length, \"NaN\"" warnings. These are cosmetic.
+onErrorCaptured((err: unknown) => {
+  if (err instanceof Error) {
+    const msg = err.message
+    if (
+      msg.includes('Expected length, \"NaN\"') ||
+      msg.includes('attribute x1') ||
+      msg.includes('attribute x2')
+    ) {
+      return false // suppress
+    }
+  }
+})
+</script>
+
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body, #__nuxt {
