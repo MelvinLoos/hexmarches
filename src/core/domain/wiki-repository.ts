@@ -23,8 +23,8 @@ export interface WikiRepository {
   /** Fetch all descendants of a given ltree path (prefix match). */
   getDescendants(path: string): Promise<WikiNode[]>
 
-  /** Update a node's title, content, and/or path. */
-  updateNode(id: string, updates: Partial<Pick<WikiNode, 'title' | 'content' | 'path'>>): Promise<WikiNode | null>
+  /** Update a node's title, content, path, cover image, and/or entity type. */
+  updateNode(id: string, updates: Partial<Pick<WikiNode, 'title' | 'content' | 'path' | 'coverImageUrl' | 'entityType'>>): Promise<WikiNode | null>
 
   /** Delete a node by its ID. Returns true if deleted. */
   deleteNode(id: string): Promise<boolean>

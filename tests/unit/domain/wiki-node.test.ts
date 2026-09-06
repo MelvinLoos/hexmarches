@@ -270,6 +270,61 @@ describe('Issue #10: Domain Layer — Wiki Node Entities & Ltree Validation', ()
     })
   })
 
+  // ─── Issue #26: Task 1 — WikiNodeType Enum & Cover Image ──────────
+  describe('WikiNodeType enum', () => {
+    it('should define six entity types', async () => {
+      // Import dynamically to check exported enum values
+      const mod = await import('~/src/core/domain/wiki-node')
+      const { WikiNodeType } = mod
+      expect(WikiNodeType).toBeDefined()
+      expect(WikiNodeType.GENERAL).toBe('GENERAL')
+      expect(WikiNodeType.LOCATION).toBe('LOCATION')
+      expect(WikiNodeType.NPC).toBe('NPC')
+      expect(WikiNodeType.FACTION).toBe('FACTION')
+      expect(WikiNodeType.ITEM).toBe('ITEM')
+      expect(WikiNodeType.QUEST).toBe('QUEST')
+      // Verify exactly 6 keys
+      expect(Object.keys(WikiNodeType)).toHaveLength(6)
+    })
+  })
+
+  describe('WikiNode with coverImageUrl and entityType', () => {
+    it('should accept coverImageUrl and entityType in createWikiNode', async () => {
+      const mod = await import('~/src/core/domain/wiki-node')
+      const node = mod.createWikiNode({
+        title: 'Dark Forest',
+        content: '# Forest',
+        path: 'locations.forest',
+        coverImageUrl: 'https://cdn.example.com/forest.jpg',
+        entityType: mod.WikiNodeType.LOCATION,
+      })
+      expect(node.coverImageUrl).toBe('https://cdn.example.com/forest.jpg')
+      expect(node.entityType).toBe('LOCATION')
+    })
+
+    it('should allow coverImageUrl and entityType to be undefined', async () => {
+      const mod = await import('~/src/core/domain/wiki-node')
+      const node = mod.createWikiNode({
+        title: 'Simple',
+        content: '# Simple',
+        path: 'simple',
+      })
+      expect(node.coverImageUrl).toBeUndefined()
+      expect(node.entityType).toBeUndefined()
+    })
+
+    it('should accept entityType GENERAL', async () => {
+      const mod = await import('~/src/core/domain/wiki-node')
+      const node = mod.createWikiNode({
+        title: 'General Node',
+        content: 'content',
+        path: 'general',
+        entityType: mod.WikiNodeType.GENERAL,
+      })
+      expect(node.entityType).toBe('GENERAL')
+    })
+  })
+
   // ─── Clean Architecture Enforcement ───────────────────────────────
   describe('Clean Architecture compliance', () => {
     it('should not import from Nuxt, Vue, or Supabase in the domain file', async () => {

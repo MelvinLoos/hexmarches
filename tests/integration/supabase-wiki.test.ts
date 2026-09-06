@@ -202,6 +202,109 @@ describe('Issue #11: Infrastructure — Supabase Wiki Adapter & FTS', () => {
     })
   })
 
+  // ─── Issue #26: Task 1 — Entity Type & Cover Image (CRUD) ─────────
+  describe('entity_type and cover_image_url fields', () => {
+    const mockNodeWithMeta: WikiNode = {
+      id: 'node-meta-1',
+      title: 'Dark Forest',
+      content: '# Dark Forest\n\nA spooky forest.',
+      path: 'campaign.locations.forest',
+      coverImageUrl: 'https://cdn.example.com/forest.jpg',
+      entityType: 'LOCATION' as WikiNode['entityType'],
+      createdAt: new Date('2025-06-01'),
+      updatedAt: new Date('2025-06-15'),
+    }
+
+    it('should create a node with coverImageUrl and entityType', async () => {
+      server.use(
+        http.post(`${SUPABASE_URL}/rest/v1/wiki_nodes`, async ({ request }) => {
+          const body = await request.json() as Record<string, unknown>
+          expect(body.cover_image_url).toBe('https://cdn.example.com/forest.jpg')
+          expect(body.entity_type).toBe('LOCATION')
+          const row = {
+            id: 'node-meta-1',
+            title: body.title,
+            content: body.content,
+            path: body.path,
+            cover_image_url: body.cover_image_url,
+            entity_type: body.entity_type,
+            created_at: '2025-06-01T00:00:00Z',
+            updated_at: '2025-06-15T00:00:00Z',
+          }
+          return HttpResponse.json(row, { status: 201 })
+        })
+      )
+
+      const repo = makeRepository()
+      const node = await repo.createNode({
+        title: 'Dark Forest',
+        content: '# Dark Forest',
+        path: 'campaign.locations.forest',
+        coverImageUrl: 'https://cdn.example.com/forest.jpg',
+        entityType: 'LOCATION' as WikiNode['entityType'],
+      })
+
+      expect(node.coverImageUrl).toBe('https://cdn.example.com/forest.jpg')
+      expect(node.entityType).toBe('LOCATION')
+    })
+
+    it('should update coverImageUrl on an existing node', async () => {
+      server.use(
+        http.patch(`${SUPABASE_URL}/rest/v1/wiki_nodes`, async ({ request }) => {
+          const url = new URL(request.url)
+          expect(url.searchParams.get('id')).toBe('eq.node-1')
+          const body = await request.json() as Record<string, unknown>
+          return HttpResponse.json([{ ...mockNode, ...body, updated_at: new Date().toISOString() }])
+        })
+      )
+
+      const repo = makeRepository()
+      const node = await repo.updateNode('node-1', { coverImageUrl: 'https://cdn.example.com/new.jpg' })
+      expect(node).not.toBeNull()
+      expect(node!.coverImageUrl).toBe('https://cdn.example.com/new.jpg')
+    })
+
+    it('should find a node with entityType from the database', async () => {
+      server.use(
+        http.get(`${SUPABASE_URL}/rest/v1/wiki_nodes`, ({ request }) => {
+          const url = new URL(request.url)
+          if (url.searchParams.get('id') === 'eq.node-meta-1') {
+            return HttpResponse.json([{
+              id: 'node-meta-1', title: 'Dark Forest', content: '# Forest',
+              path: 'campaign.locations.forest',
+              cover_image_url: 'https://cdn.example.com/forest.jpg',
+              entity_type: 'LOCATION',
+              created_at: '2025-06-01T00:00:00Z', updated_at: '2025-06-15T00:00:00Z',
+            }])
+          }
+          return HttpResponse.json([])
+        })
+      )
+
+      const repo = makeRepository()
+      const node = await repo.findById('node-meta-1')
+      expect(node).not.toBeNull()
+      expect(node!.coverImageUrl).toBe('https://cdn.example.com/forest.jpg')
+      expect(node!.entityType).toBe('LOCATION')
+    })
+
+    it('should update entityType on an existing node', async () => {
+      server.use(
+        http.patch(`${SUPABASE_URL}/rest/v1/wiki_nodes`, async ({ request }) => {
+          const url = new URL(request.url)
+          expect(url.searchParams.get('id')).toBe('eq.node-1')
+          const body = await request.json() as Record<string, unknown>
+          return HttpResponse.json([{ ...mockNode, ...body, entity_type: 'NPC', updated_at: new Date().toISOString() }])
+        })
+      )
+
+      const repo = makeRepository()
+      const node = await repo.updateNode('node-1', { entityType: 'NPC' as WikiNode['entityType'] })
+      expect(node).not.toBeNull()
+      expect(node!.entityType).toBe('NPC')
+    })
+  })
+
   // ─── Full-Text Search ────────────────────────────────────────────
   describe('search()', () => {
     const searchResults = [

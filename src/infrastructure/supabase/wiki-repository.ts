@@ -13,6 +13,8 @@ interface SupabaseWikiRow {
   path: string
   parent_id?: string
   children?: string[]
+  cover_image_url?: string
+  entity_type?: string
   created_at: string
   updated_at: string
   rank?: number
@@ -27,6 +29,8 @@ function toDomain(row: SupabaseWikiRow): WikiNode {
     path: row.path,
     parentId: row.parent_id,
     children: row.children,
+    coverImageUrl: row.cover_image_url,
+    entityType: row.entity_type as WikiNode['entityType'],
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
   }
@@ -39,6 +43,8 @@ function toRow(input: Partial<CreateWikiNodeInput>): Record<string, unknown> {
   if (input.path !== undefined) row.path = input.path
   if (input.parentId !== undefined) row.parent_id = input.parentId
   if (input.children !== undefined) row.children = input.children
+  if (input.coverImageUrl !== undefined) row.cover_image_url = input.coverImageUrl
+  if (input.entityType !== undefined) row.entity_type = input.entityType
   return row
 }
 
@@ -96,7 +102,7 @@ export class SupabaseWikiRepository implements WikiRepository {
 
   async updateNode(
     id: string,
-    updates: Partial<Pick<WikiNode, 'title' | 'content' | 'path'>>
+    updates: Partial<Pick<WikiNode, 'title' | 'content' | 'path' | 'coverImageUrl' | 'entityType'>>
   ): Promise<WikiNode | null> {
     const row = toRow(updates)
     row.updated_at = new Date().toISOString()

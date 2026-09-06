@@ -65,7 +65,7 @@ export class WikiService {
 
   async updateNode(
     id: string,
-    updates: Partial<Pick<WikiNode, 'title' | 'content' | 'path'>>
+    updates: Partial<Pick<WikiNode, 'title' | 'content' | 'path' | 'coverImageUrl' | 'entityType'>>
   ): Promise<WikiNode | null> {
     // Validate new path if provided
     if (updates.path !== undefined && !validateLtreePath(updates.path)) {

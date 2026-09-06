@@ -47,6 +47,16 @@ export function validateLtreePath(path: string): boolean {
 
 // ─── Wiki Node Entity ───────────────────────────────────────────────
 
+/** WikiNodeType enum — defines the six canonical entity types per Sprint 1.8 */
+export enum WikiNodeType {
+  GENERAL = 'GENERAL',
+  LOCATION = 'LOCATION',
+  NPC = 'NPC',
+  FACTION = 'FACTION',
+  ITEM = 'ITEM',
+  QUEST = 'QUEST',
+}
+
 export interface WikiNode {
   readonly id: string
   readonly title: string
@@ -54,6 +64,8 @@ export interface WikiNode {
   readonly path: string // ltree-style hierarchical path
   readonly parentId?: string
   readonly children?: string[]
+  readonly coverImageUrl?: string
+  readonly entityType?: WikiNodeType
   readonly createdAt: Date
   readonly updatedAt: Date
 }
@@ -64,6 +76,8 @@ export interface CreateWikiNodeInput {
   path: string
   parentId?: string
   children?: string[]
+  coverImageUrl?: string
+  entityType?: WikiNodeType
   createdAt?: Date
   updatedAt?: Date
 }
@@ -133,6 +147,8 @@ export function createWikiNode(input: CreateWikiNodeInput): WikiNode {
     path: input.path,
     parentId: input.parentId,
     children: input.children,
+    coverImageUrl: input.coverImageUrl,
+    entityType: input.entityType,
     createdAt: input.createdAt ?? new Date(),
     updatedAt: input.updatedAt ?? new Date(),
   }
