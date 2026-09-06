@@ -10,7 +10,7 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     include: ['tests/**/*.test.ts'],
-    exclude: ['node_modules', '.nuxt', 'dist'],
+    exclude: ['node_modules', '.nuxt', 'dist', 'tests/e2e/**'],
   },
   resolve: {
     alias: {

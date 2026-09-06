@@ -12,7 +12,9 @@
     "test:watch": "vitest",
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
-    "test:components": "vitest run tests/components"
+    "test:components": "vitest run tests/components",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@nuxtjs/mdc": "^0.13.0",
@@ -31,6 +33,7 @@
   },
   "devDependencies": {
     "@nuxt/test-utils": "^3.17.0",
+    "@playwright/test": "^1.63.0",
     "@vitejs/plugin-vue": "^6.0.8",
     "@vue/test-utils": "^2.4.0",
     "jsdom": "^29.1.1",
