@@ -8,7 +8,10 @@
         data-testid="wiki-title"
         type="text"
         placeholder="Node Title"
+        :class="{ 'input-error': titleError }"
+        @input="titleError = ''"
       />
+      <span v-if="titleError" data-testid="wiki-title-error" class="field-error">{{ titleError }}</span>
     </div>
 
     <div class="editor-field">
@@ -56,15 +59,27 @@
       <div
         data-testid="wiki-cover-dropzone"
         class="cover-dropzone"
+        @dragover.prevent="dragOver = true"
+        @dragleave.prevent="dragOver = false"
+        @drop.prevent="handleCoverDrop"
+        :class="{ 'drop-active': dragOver }"
       >
+        <input
+          type="file"
+          data-testid="wiki-cover-file"
+          accept="image/*"
+          class="cover-file-input"
+          @change="handleCoverFileSelect"
+        />
         <input
           id="wiki-cover-image"
           v-model="coverImageUrl"
           data-testid="wiki-cover-image"
           type="url"
-          placeholder="https://... or drop an image"
+          placeholder="Paste a URL, click to browse, or drag & drop an image"
           class="cover-image-input"
         />
+        <span v-if="coverUploading" data-testid="wiki-cover-uploading" class="cover-uploading">Uploading...</span>
       </div>
       <img
         v-if="coverImageUrl"
@@ -113,7 +128,10 @@ const entityTypeOptions = Object.values(WikiNodeType)
 const title = ref(props.initialTitle ?? '')
 const content = ref(props.initialContent ?? '')
 const coverImageUrl = ref(props.initialCoverImageUrl ?? '')
-const entityType = ref(props.initialEntityType ?? '')
+const entityType = ref(props.initialEntityType || WikiNodeType.GENERAL)
+const titleError = ref('')
+const dragOver = ref(false)
+const coverUploading = ref(false)
 
 // Determine initial parent from initialPath
 function extractParentPath(fullPath: string): string {
@@ -137,7 +155,6 @@ const generatedPath = computed(() => {
 })
 
 async function handleUploadImage(files: File[], callback: (urls: string[]) => void) {
-  // Delegate to parent via emit. The parent owns the AssetService dependency.
   for (const file of files) {
     emit('uploadImage', file, (url: string) => {
       callback([url])
@@ -145,13 +162,41 @@ async function handleUploadImage(files: File[], callback: (urls: string[]) => vo
   }
 }
 
+function handleCoverFileSelect(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  uploadCoverFile(file)
+  input.value = ''
+}
+
+function handleCoverDrop(event: DragEvent) {
+  dragOver.value = false
+  const file = event.dataTransfer?.files?.[0]
+  if (!file) return
+  uploadCoverFile(file)
+}
+
+function uploadCoverFile(file: File) {
+  coverUploading.value = true
+  emit('uploadImage', file, (url: string) => {
+    coverImageUrl.value = url
+    coverUploading.value = false
+  })
+}
+
 function handleSave() {
+  titleError.value = ''
+  if (!title.value.trim()) {
+    titleError.value = 'Title is required.'
+    return
+  }
   emit('save', {
     title: title.value,
     content: content.value,
     path: generatedPath.value || '',
     coverImageUrl: coverImageUrl.value || undefined,
-    entityType: entityType.value || undefined,
+    entityType: entityType.value as string,
   })
 }
 </script>
@@ -187,6 +232,14 @@ function handleSave() {
   outline: none;
   border-color: #e94560;
 }
+.input-error {
+  border-color: #c62828 !important;
+}
+.field-error {
+  color: #c62828;
+  font-size: 0.8rem;
+  margin-top: 2px;
+}
 .path-preview {
   padding: 6px 12px;
   background: #0f3460;
@@ -197,9 +250,34 @@ function handleSave() {
 }
 .cover-dropzone {
   position: relative;
+  border: 2px dashed #0f3460;
+  border-radius: 6px;
+  padding: 8px;
+  transition: border-color 0.2s;
+}
+.cover-dropzone.drop-active {
+  border-color: #e94560;
+  background: rgba(233, 69, 96, 0.06);
+}
+.cover-file-input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
 }
 .cover-image-input {
   width: 100%;
+  border: none !important;
+  background: transparent !important;
+  padding: 4px 0 !important;
+}
+.cover-uploading {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.8rem;
+  color: #e94560;
 }
 .cover-preview {
   margin-top: 8px;

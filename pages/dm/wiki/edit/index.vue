@@ -8,6 +8,7 @@
       :initial-path="initialPath"
       :parent-options="parentOptions"
       @save="handleSave"
+      @upload-image="handleUploadImage"
     />
 
     <div class="toast-container">
@@ -26,9 +27,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useWikiService } from '~/composables/useWikiService'
 import { useToast } from '~/composables/useToast'
+import type { WikiNode } from '~/src/core/domain/wiki-node'
 
 const wikiService = useWikiService()
 const { toasts, success: showSuccess, error: showError } = useToast()
@@ -36,18 +38,49 @@ const { toasts, success: showSuccess, error: showError } = useToast()
 const initialTitle = ref('')
 const initialContent = ref('')
 const initialPath = ref('')
+const parentOptions = ref<WikiNode[]>([])
 
-async function handleSave(payload: { title: string; content: string; path: string }) {
+onMounted(async () => {
+  try {
+    parentOptions.value = await wikiService.getNodeTree('')
+  } catch {
+    // keep empty options
+  }
+})
+
+async function handleSave(payload: { title: string; content: string; path: string; coverImageUrl?: string; entityType?: string }) {
   try {
     await wikiService.createNode({
       title: payload.title,
       content: payload.content,
       path: payload.path,
+      coverImageUrl: payload.coverImageUrl,
+      entityType: payload.entityType,
     })
     showSuccess(`"${payload.title}" created successfully!`)
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     showError(`Save failed: ${message}`)
+  }
+}
+
+async function handleUploadImage(file: File, callback: (url: string) => void) {
+  try {
+    const supabase = useSupabaseClient()
+    const { data } = await supabase.storage
+      .from('wiki-assets')
+      .upload(`wiki-covers/${Date.now()}_${file.name}`, file, {
+        cacheControl: '3600',
+        upsert: true,
+      })
+    if (data) {
+      const publicUrl = supabase.storage
+        .from('wiki-assets')
+        .getPublicUrl(data.path).data.publicUrl
+      callback(publicUrl)
+    }
+  } catch {
+    showError('Failed to upload image.')
   }
 }
 </script>

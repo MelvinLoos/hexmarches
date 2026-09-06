@@ -43,6 +43,13 @@ export default defineNuxtConfig({
     },
   },
 
+  vue: {
+    compilerOptions: {
+      // Suppress <Suspense> experimental warning (Nuxt 3 uses Suspense internally)
+      isCustomElement: () => false,
+    },
+  },
+
   vite: {
     optimizeDeps: {
       include: ['md-editor-v3'],

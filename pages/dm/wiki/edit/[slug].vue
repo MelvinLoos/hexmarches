@@ -9,8 +9,11 @@
       :initial-title="initialTitle"
       :initial-content="initialContent"
       :initial-path="initialPath"
+      :initial-cover-image-url="initialCoverImageUrl"
+      :initial-entity-type="initialEntityType"
       :parent-options="parentOptions"
       @save="handleSave"
+      @upload-image="handleUploadImage"
     />
 
     <div class="toast-container">
@@ -42,6 +45,8 @@ const { toasts, success: showSuccess, error: showError } = useToast()
 const initialTitle = ref('')
 const initialContent = ref('')
 const initialPath = ref('')
+const initialCoverImageUrl = ref('')
+const initialEntityType = ref('')
 const editingNodeId = ref<string | null>(null)
 const loading = ref(true)
 const parentOptions = ref<WikiNode[]>([])
@@ -62,6 +67,8 @@ async function loadExistingNode() {
       initialTitle.value = node.title
       initialContent.value = node.content
       initialPath.value = node.path
+      initialCoverImageUrl.value = node.coverImageUrl ?? ''
+      initialEntityType.value = node.entityType ?? ''
     }
     parentOptions.value = folders
   } catch {
@@ -71,19 +78,40 @@ async function loadExistingNode() {
   }
 }
 
-async function handleSave(payload: { title: string; content: string; path: string }) {
+async function handleSave(payload: { title: string; content: string; path: string; coverImageUrl?: string; entityType?: string }) {
   try {
     if (editingNodeId.value) {
       await wikiService.updateNode(editingNodeId.value, {
         title: payload.title,
         content: payload.content,
         path: payload.path,
+        coverImageUrl: payload.coverImageUrl,
+        entityType: payload.entityType,
       })
       showSuccess(`"${payload.title}" updated successfully!`)
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     showError(`Save failed: ${message}`)
+  }
+}
+
+async function handleUploadImage(file: File, callback: (url: string) => void) {
+  try {
+    const { data } = await useSupabaseClient().storage
+      .from('wiki-assets')
+      .upload(`wiki-covers/${Date.now()}_${file.name}`, file, {
+        cacheControl: '3600',
+        upsert: true,
+      })
+    if (data) {
+      const publicUrl = useSupabaseClient().storage
+        .from('wiki-assets')
+        .getPublicUrl(data.path).data.publicUrl
+      callback(publicUrl)
+    }
+  } catch (err) {
+    showError('Failed to upload image.')
   }
 }
 

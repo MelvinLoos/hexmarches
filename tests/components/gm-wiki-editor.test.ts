@@ -119,6 +119,71 @@ describe('GmWikiEditor.vue — Parent Selector UI', () => {
     const w = mountComponent({ initialTitle: 'Prefilled' })
     expect((w.find('[data-testid="wiki-title"]').element as HTMLInputElement).value).toBe('Prefilled')
   })
+
+  // ─── Title Validation ──────────────────────────────────────────
+  describe('Title Validation', () => {
+    it('shows error when saving with empty title', async () => {
+      const w = mountComponent({ parentOptions: mockFolders })
+      await w.find('[data-testid="wiki-save"]').trigger('click')
+      expect(w.find('[data-testid="wiki-title-error"]').exists()).toBe(true)
+      expect(w.find('[data-testid="wiki-title-error"]').text()).toContain('Title is required')
+    })
+
+    it('does not emit save when title is empty', async () => {
+      const w = mountComponent({ parentOptions: mockFolders })
+      await w.find('[data-testid="wiki-save"]').trigger('click')
+      expect(w.emitted('save')).toBeUndefined()
+    })
+
+    it('clears error when user starts typing', async () => {
+      const w = mountComponent({ parentOptions: mockFolders })
+      await w.find('[data-testid="wiki-save"]').trigger('click')
+      expect(w.find('[data-testid="wiki-title-error"]').exists()).toBe(true)
+      await w.find('[data-testid="wiki-title"]').setValue('X')
+      expect(w.find('[data-testid="wiki-title-error"]').exists()).toBe(false)
+    })
+  })
+
+  // ─── Default Entity Type ───────────────────────────────────────
+  describe('Default Entity Type', () => {
+    it('defaults entity type to GENERAL on new forms', () => {
+      const w = mountComponent({ parentOptions: mockFolders })
+      expect((w.find('[data-testid="wiki-entity-type"]').element as HTMLSelectElement).value).toBe('GENERAL')
+    })
+
+    it('uses provided initial entity type when editing', () => {
+      const w = mountComponent({ parentOptions: mockFolders, initialEntityType: 'NPC' })
+      expect((w.find('[data-testid="wiki-entity-type"]').element as HTMLSelectElement).value).toBe('NPC')
+    })
+  })
+
+  // ─── Cover Image File Upload ────────────────────────────────────
+  describe('Cover Image File Upload', () => {
+    it('renders a file input for cover image selection', () => {
+      const w = mountComponent({ parentOptions: mockFolders })
+      expect(w.find('[data-testid="wiki-cover-file"]').exists()).toBe(true)
+    })
+
+    it('emits uploadImage event when a cover file is selected', async () => {
+      const w = mountComponent({ parentOptions: mockFolders })
+      const file = new File(['image-data'], 'cover.png', { type: 'image/png' })
+      const input = w.find('[data-testid="wiki-cover-file"]')
+      // Simulate file selection
+      Object.defineProperty(input.element, 'files', {
+        value: [file],
+        writable: false,
+      })
+      await input.trigger('change')
+      expect(w.emitted('uploadImage')).toBeTruthy()
+      expect(w.emitted('uploadImage')![0][0]).toBe(file)
+    })
+
+    it('shows uploading indicator while upload is in progress', () => {
+      const w = mountComponent({ parentOptions: mockFolders })
+      // Uploading is false initially
+      expect(w.find('[data-testid="wiki-cover-uploading"]').exists()).toBe(false)
+    })
+  })
 // ─── Issue #28: Task 3 — Cover Image & Entity Type ────────────────
   describe('Cover Image Dropzone', () => {
     it('renders a cover image URL input', () => {
