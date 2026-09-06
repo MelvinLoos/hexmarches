@@ -17,9 +17,8 @@ export default defineNuxtConfig({
     },
     public: {
       supabase: {
-        // Exposed to client: URL and anon key
-        url: '',
-        key: '',
+        // URL and key are injected by @nuxtjs/supabase module defaults
+        // from process.env.SUPABASE_URL / SUPABASE_KEY
       },
     },
   },
