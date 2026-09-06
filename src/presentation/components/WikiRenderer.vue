@@ -1,45 +1,15 @@
 <template>
-  <div class="wiki-renderer" v-html="renderedHtml"></div>
+  <div class="wiki-renderer">
+    <MDC :value="content" tag="div" />
+  </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { MDC } from '@nuxtjs/mdc'
 
-const props = defineProps<{
+defineProps<{
   content: string
 }>()
-
-/**
- * Simple markdown-to-HTML converter for inline rendering.
- * For production, @nuxtjs/mdc would handle MDC component syntax
- * (e.g., ::handout{...}) and full markdown parsing.
- * This provides a baseline for testing the renderer wrapper.
- */
-function parseMarkdown(md: string): string {
-  if (!md) return ''
-
-  let html = md
-    // Headers
-    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-    // Bold
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    // Italic
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    // Line breaks
-    .replace(/\n\n/g, '</p><p>')
-    .replace(/\n/g, '<br />')
-
-  // Wrap in paragraph if not already
-  if (!html.startsWith('<h') && !html.startsWith('<p>')) {
-    html = '<p>' + html + '</p>'
-  }
-
-  return html
-}
-
-const renderedHtml = computed(() => parseMarkdown(props.content))
 </script>
 
 <style scoped>
