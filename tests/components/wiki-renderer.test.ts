@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { defineComponent, h } from 'vue'
 import Handout from '../../components/content/Handout.vue'
-import WikiRenderer from '~/presentation/components/WikiRenderer.vue'
+import WikiRenderer from '~/src/presentation/components/WikiRenderer.vue'
 
 function parseBlocks(value: string) {
   const blocks: { title: string; content: string }[] = []

@@ -5,7 +5,7 @@ import {
   type WikiNode,
   createWikiNode,
   LtreeValidationError,
-} from '~/core/domain/wiki-node'
+} from '~/src/core/domain/wiki-node'
 
 // ─── Issue #10: Task 1 — Wiki Node Entities & Ltree Validation ──────
 // Acceptance Criteria:

@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
-import WikiNodeView from '~/presentation/components/WikiNodeView.vue'
-import MonsterStatBlock from '~/presentation/components/MonsterStatBlock.vue'
-import type { WikiNode } from '~/presentation/types/wiki'
+import WikiNodeView from '~/src/presentation/components/WikiNodeView.vue'
+import MonsterStatBlock from '~/src/presentation/components/MonsterStatBlock.vue'
+import type { WikiNode } from '~/src/presentation/types/wiki'
 
 vi.mock('@nuxtjs/mdc', () => ({
   MDCRenderer: vi.fn().mockImplementation(() => ({ render: vi.fn() })),

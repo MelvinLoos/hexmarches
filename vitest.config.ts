@@ -2,7 +2,7 @@ import { defineConfig } from 'vitest/config'
 import vue from '@vitejs/plugin-vue'
 import { resolve } from 'node:path'
 
-const srcDir = resolve(__dirname, 'src')
+const rootDir = __dirname
 
 export default defineConfig({
   plugins: [vue()],
@@ -14,8 +14,8 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '~': srcDir,
-      '@': srcDir,
+      '~': rootDir,
+      '@': rootDir,
     },
   },
 })

@@ -18,7 +18,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { WikiNode } from '~/core/domain/wiki-node'
+import type { WikiNode } from '~/src/core/domain/wiki-node'
 import TreeNode from './TreeNode.vue'
 
 export interface WikiTreeNode {

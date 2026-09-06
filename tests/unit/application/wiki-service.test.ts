@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { WikiService, sanitizeMarkdown } from '~/core/application/wiki-service'
-import type { WikiRepository, WikiNodeSearchResult } from '~/core/domain/wiki-repository'
-import type { WikiNode, CreateWikiNodeInput } from '~/core/domain/wiki-node'
+import { WikiService, sanitizeMarkdown } from '~/src/core/application/wiki-service'
+import type { WikiRepository, WikiNodeSearchResult } from '~/src/core/domain/wiki-repository'
+import type { WikiNode, CreateWikiNodeInput } from '~/src/core/domain/wiki-node'
 
 function createMockRepo(): WikiRepository {
   const store = new Map<string, WikiNode>()

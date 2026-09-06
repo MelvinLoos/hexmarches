@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
   OutboxEntry, OutboxStatus, createOutboxEntry,
   compareLwwTimestamps, OutboxQueue,
-} from '~/core/application/outbox'
+} from '~/src/core/application/outbox'
 
 vi.mock('idb', () => {
   const store = new Map<string, any>()

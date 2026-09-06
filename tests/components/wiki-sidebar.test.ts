@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { mount, RouterLinkStub } from '@vue/test-utils'
 import { defineComponent, h } from 'vue'
 import WikiSidebar from '../../components/wiki/WikiSidebar.vue'
-import type { WikiNode } from '~/core/domain/wiki-node'
+import type { WikiNode } from '~/src/core/domain/wiki-node'
 
 // ─── Issue #15: Task 2 — Recursive File Tree Sidebar ──────────────────────
 // AC1: Component test mocks a list of nested WikiNode objects

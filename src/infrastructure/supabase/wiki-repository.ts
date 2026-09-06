@@ -2,8 +2,8 @@
 // Infrastructure adapter — implements WikiRepository using Supabase
 // Handles database CRUD for Wiki Nodes, ltree querying, and FTS.
 
-import type { WikiNode, CreateWikiNodeInput } from '~/core/domain/wiki-node'
-import type { WikiRepository, WikiNodeSearchResult } from '~/core/domain/wiki-repository'
+import type { WikiNode, CreateWikiNodeInput } from '~/src/core/domain/wiki-node'
+import type { WikiRepository, WikiNodeSearchResult } from '~/src/core/domain/wiki-repository'
 import type { SupabaseAdapter } from './adapter'
 
 interface SupabaseWikiRow {

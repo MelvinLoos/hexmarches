@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { calculateTier, Tier, Character, Milestone } from '~/core/domain/milestones'
+import { calculateTier, Tier, Character, Milestone } from '~/src/core/domain/milestones'
 
 describe('Issue #2: Domain Layer — Milestone & Progression Rules', () => {
   // ─── Tier Calculation ────────────────────────────────────────────

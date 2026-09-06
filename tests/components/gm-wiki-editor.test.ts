@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { defineComponent, h } from 'vue'
-import GmWikiEditor from '~/presentation/components/GmWikiEditor.client.vue'
+import GmWikiEditor from '~/src/presentation/components/GmWikiEditor.client.vue'
 
 vi.mock('md-editor-v3', () => ({
   MdEditor: defineComponent({

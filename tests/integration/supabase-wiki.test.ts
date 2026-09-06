@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest'
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
-import { SupabaseWikiRepository } from '~/infrastructure/supabase/wiki-repository'
-import { createSupabaseAdapter } from '~/infrastructure/supabase/adapter'
+import { SupabaseWikiRepository } from '~/src/infrastructure/supabase/wiki-repository'
+import { createSupabaseAdapter } from '~/src/infrastructure/supabase/adapter'
 import { createClient } from '@supabase/supabase-js'
-import type { WikiNode } from '~/core/domain/wiki-node'
+import type { WikiNode } from '~/src/core/domain/wiki-node'
 
 // ─── Issue #11: Task 2 — Supabase Wiki Adapter & FTS ───────────────
 // CRUD operations, tree-fetching by ltree paths, Full-Text Search queries

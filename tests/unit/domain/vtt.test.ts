@@ -13,7 +13,7 @@ import {
   TokenPosition,
   createVttPayload,
   validateVttPayload,
-} from '~/core/domain/vtt'
+} from '~/src/core/domain/vtt'
 
 describe('Issue #3: Domain Layer — VTT Payload & Hex Math Definitions', () => {
   describe('HexCoord', () => {

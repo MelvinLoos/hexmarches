@@ -4,9 +4,9 @@
 //   Sanitization over Trust: sanitize all markdown string inputs from
 //   the GM editor prior to passing them to the Infrastructure Layer.
 
-import type { WikiNode, CreateWikiNodeInput } from '~/core/domain/wiki-node'
-import type { WikiRepository, WikiNodeSearchResult } from '~/core/domain/wiki-repository'
-import { validateLtreePath, LtreeValidationError } from '~/core/domain/wiki-node'
+import type { WikiNode, CreateWikiNodeInput } from '~/src/core/domain/wiki-node'
+import type { WikiRepository, WikiNodeSearchResult } from '~/src/core/domain/wiki-repository'
+import { validateLtreePath, LtreeValidationError } from '~/src/core/domain/wiki-node'
 
 // ─── Markdown Sanitization ─────────────────────────────────────────
 

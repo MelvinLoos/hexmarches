@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
-import VttCanvas from '~/presentation/components/VttCanvas.vue'
+import VttCanvas from '~/src/presentation/components/VttCanvas.vue'
 
 vi.mock('vue-konva', () => {
   const { defineComponent, h } = require('vue')

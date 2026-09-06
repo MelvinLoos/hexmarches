@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { createSupabaseAdapter, SupabaseAdapter } from '~/infrastructure/supabase/adapter'
-import { useAuth, AuthState } from '~/infrastructure/supabase/auth'
+import { createSupabaseAdapter, SupabaseAdapter } from '~/src/infrastructure/supabase/adapter'
+import { useAuth, AuthState } from '~/src/infrastructure/supabase/auth'
 
 // Mock @supabase/supabase-js to avoid real network calls
 // (the adapter no longer calls createClient itself,
