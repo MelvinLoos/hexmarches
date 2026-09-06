@@ -87,6 +87,7 @@ describe('Issue #17: Dynamic Wiki Viewer Route', () => {
     mockGetDescendants.mockResolvedValue([mockNode])
 
     mountPage(['locations', 'forest'])
+    await new Promise(r => setTimeout(r, 10))
 
     expect(mockFindByPath).toHaveBeenCalledWith('locations.forest')
   })
@@ -183,6 +184,8 @@ describe('Issue #17: Dynamic Wiki Viewer Route', () => {
     mockGetDescendants.mockResolvedValue([mockNode])
 
     mountPage(['root'])
+    await new Promise(r => setTimeout(r, 10))
+
     expect(mockFindByPath).toHaveBeenCalledWith('root')
   })
 })

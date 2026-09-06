@@ -49,12 +49,24 @@ const EditorStub = {
   name: 'GmWikiEditor',
 }
 
-import EditPage from '../../pages/dm/wiki/edit/[[...slug]].vue'
+import EditCreatePage from '../../pages/dm/wiki/edit/index.vue'
+import EditSlugPage from '../../pages/dm/wiki/edit/[slug].vue'
 
-function mountEditPage(slug: string[] = []) {
+function mountCreatePage() {
+  return mount(EditCreatePage, {
+    global: {
+      stubs: {
+        GmWikiEditor: EditorStub,
+        NuxtLink: RouterLinkStub,
+      },
+    },
+  })
+}
+
+function mountEditPage(slug: string = 'campaign.old') {
   mockRouteData.slug = slug
 
-  return mount(EditPage, {
+  return mount(EditSlugPage, {
     global: {
       stubs: {
         GmWikiEditor: EditorStub,
@@ -71,7 +83,7 @@ describe('Issue #16: Editor Data-Binding & Save Flow', () => {
 
   describe('Creating a new node (no slug)', () => {
     it('renders editor with empty fields', () => {
-      const wrapper = mountEditPage([])
+      const wrapper = mountCreatePage()
       expect(wrapper.find('[data-testid="gm-wiki-editor"]').exists()).toBe(true)
     })
 
@@ -85,7 +97,7 @@ describe('Issue #16: Editor Data-Binding & Save Flow', () => {
         updatedAt: new Date(),
       })
 
-      const wrapper = mountEditPage([])
+      const wrapper = mountCreatePage()
       await wrapper.find('[data-testid="trigger-save"]').trigger('click')
       await wrapper.vm.$nextTick()
 
@@ -106,7 +118,7 @@ describe('Issue #16: Editor Data-Binding & Save Flow', () => {
         updatedAt: new Date(),
       })
 
-      const wrapper = mountEditPage([])
+      const wrapper = mountCreatePage()
       await wrapper.find('[data-testid="trigger-save"]').trigger('click')
       await new Promise(r => setTimeout(r, 20))
       await wrapper.vm.$nextTick()
@@ -119,7 +131,7 @@ describe('Issue #16: Editor Data-Binding & Save Flow', () => {
     it('shows error toast on save failure', async () => {
       mockCreateNode.mockRejectedValue(new Error('DB error'))
 
-      const wrapper = mountEditPage([])
+      const wrapper = mountCreatePage()
       await wrapper.find('[data-testid="trigger-save"]').trigger('click')
       await new Promise(r => setTimeout(r, 20))
       await wrapper.vm.$nextTick()
@@ -142,7 +154,7 @@ describe('Issue #16: Editor Data-Binding & Save Flow', () => {
     it('loads existing node data on mount', async () => {
       mockFindByPath.mockResolvedValue(existingNode)
 
-      mountEditPage(['campaign', 'old'])
+      mountEditPage('campaign.old')
       await new Promise(r => setTimeout(r, 10))
 
       expect(mockFindByPath).toHaveBeenCalledWith('campaign.old')
@@ -157,7 +169,7 @@ describe('Issue #16: Editor Data-Binding & Save Flow', () => {
         updatedAt: new Date(),
       })
 
-      const wrapper = mountEditPage(['campaign', 'old'])
+      const wrapper = mountEditPage('campaign.old')
       await new Promise(r => setTimeout(r, 10))
       await wrapper.vm.$nextTick()
 
