@@ -2,80 +2,117 @@ import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { defineComponent, h } from 'vue'
 import GmWikiEditor from '~/src/presentation/components/GmWikiEditor.client.vue'
+import type { WikiNode } from '~/src/core/domain/wiki-node'
 
 vi.mock('md-editor-v3', () => ({
   MdEditor: defineComponent({
     name: 'MdEditor',
-    props: {
-      modelValue: String,
-      theme: String,
-      language: String,
-      previewTheme: String,
-    },
+    props: { modelValue: String, theme: String, language: String, previewTheme: String },
     emits: ['update:modelValue'],
     setup(props, { emit }) {
-      return () =>
-        h('div', { 'data-testid': 'md-editor' }, [
-          h('textarea', {
-            value: props.modelValue,
-            'data-testid': 'editor-textarea',
-            onInput: (e: Event) =>
-              emit('update:modelValue', (e.target as HTMLTextAreaElement).value),
-          }),
-        ])
+      return () => h('div', { 'data-testid': 'md-editor' }, [
+        h('textarea', {
+          value: props.modelValue,
+          'data-testid': 'editor-textarea',
+          onInput: (e: Event) => emit('update:modelValue', (e.target as HTMLTextAreaElement).value),
+        }),
+      ])
     },
   }),
 }))
 
-function mountComponent(initialTitle = '', initialContent = '', initialPath = '') {
-  return mount(GmWikiEditor, {
-    props: { initialTitle, initialContent, initialPath },
-  })
+const mockFolders: WikiNode[] = [
+  { id: '1', title: 'Locations', content: '', path: 'locations', createdAt: new Date(), updatedAt: new Date() },
+  { id: '2', title: 'Factions', content: '', path: 'factions', createdAt: new Date(), updatedAt: new Date() },
+  { id: '3', title: 'Dark Forest', content: '# Forest', path: 'locations.forest', createdAt: new Date(), updatedAt: new Date() },
+]
+
+function mountComponent(props: Record<string, unknown> = {}) {
+  return mount(GmWikiEditor, { props: {
+    initialTitle: props.initialTitle ?? '',
+    initialContent: props.initialContent ?? '',
+    initialPath: props.initialPath ?? '',
+    parentOptions: props.parentOptions ?? [],
+  }})
 }
-describe('GmWikiEditor.vue', () => {
-  it('mounts successfully', () => {
-    const wrapper = mountComponent()
-    expect(wrapper.exists()).toBe(true)
+
+describe('GmWikiEditor.vue — Parent Selector UI', () => {
+  it('mounts successfully', () => expect(mountComponent().exists()).toBe(true))
+  it('renders md-editor mock', () => expect(mountComponent().find('[data-testid="md-editor"]').exists()).toBe(true))
+  it('renders title input', () => expect(mountComponent().find('[data-testid="wiki-title"]').exists()).toBe(true))
+  it('renders save button', () => expect(mountComponent().find('[data-testid="wiki-save"]').exists()).toBe(true))
+
+  it('NO LONGER renders raw ltree path input', () => {
+    expect(mountComponent().find('[data-testid="wiki-path"]').exists()).toBe(false)
   })
 
-  it('renders md-editor mock', () => {
-    const wrapper = mountComponent()
-    expect(wrapper.find('[data-testid="md-editor"]').exists()).toBe(true)
+  it('renders parent select dropdown', () => {
+    const w = mountComponent({ parentOptions: mockFolders })
+    expect(w.find('[data-testid="wiki-parent"]').exists()).toBe(true)
   })
 
-  it('renders title input', () => {
-    const wrapper = mountComponent()
-    expect(wrapper.find('[data-testid="wiki-title"]').exists()).toBe(true)
+  it('renders Root as first option', () => {
+    const w = mountComponent({ parentOptions: mockFolders })
+    expect(w.find('[data-testid="wiki-parent"] option:first-child').text()).toContain('Root')
   })
 
-  it('renders path input', () => {
-    const wrapper = mountComponent()
-    expect(wrapper.find('[data-testid="wiki-path"]').exists()).toBe(true)
+  it('renders folder names in select', () => {
+    const w = mountComponent({ parentOptions: mockFolders })
+    const t = w.find('[data-testid="wiki-parent"]').text()
+    expect(t).toContain('Locations')
+    expect(t).toContain('Factions')
   })
 
-  it('renders save button', () => {
-    const wrapper = mountComponent()
-    expect(wrapper.find('[data-testid="wiki-save"]').exists()).toBe(true)
+  it('shows path preview when title has content', async () => {
+    const w = mountComponent({ parentOptions: mockFolders })
+    // No preview before typing
+    expect(w.find('[data-testid="wiki-path-preview"]').exists()).toBe(false)
+    // Preview appears after typing
+    await w.find('[data-testid="wiki-title"]').setValue('Dark Forest')
+    await w.vm.$nextTick()
+    expect(w.find('[data-testid="wiki-path-preview"]').exists()).toBe(true)
   })
 
-  it('emits save payload with title, content, and path', async () => {
-    const wrapper = mountComponent()
-    await wrapper.find('[data-testid="wiki-title"]').setValue('Dark Forest')
-    await wrapper.find('[data-testid="editor-textarea"]').setValue('# Content')
-    await wrapper.find('[data-testid="wiki-path"]').setValue('campaign.locations.forest')
-    await wrapper.find('[data-testid="wiki-save"]').trigger('click')
-    const saveEvents = wrapper.emitted('save')
-    expect(saveEvents).toBeDefined()
-    expect(saveEvents![0][0]).toEqual({
-      title: 'Dark Forest',
-      content: '# Content',
-      path: 'campaign.locations.forest',
+  it('updates path preview when title typed', async () => {
+    const w = mountComponent({ parentOptions: mockFolders })
+    await w.find('[data-testid="wiki-title"]').setValue('Dark Forest')
+    await w.vm.$nextTick()
+    expect(w.find('[data-testid="wiki-path-preview"]').text()).toContain('dark_forest')
+  })
+
+  it('includes parent path in preview when parent selected', async () => {
+    const w = mountComponent({ parentOptions: mockFolders })
+    await w.find('[data-testid="wiki-parent"]').setValue('locations')
+    await w.find('[data-testid="wiki-title"]').setValue('Haunted Cave')
+    await w.vm.$nextTick()
+    expect(w.find('[data-testid="wiki-path-preview"]').text()).toContain('locations.haunted_cave')
+  })
+
+  it('emits save payload with auto-generated path', async () => {
+    const w = mountComponent({ parentOptions: mockFolders })
+    await w.find('[data-testid="wiki-parent"]').setValue('locations')
+    await w.find('[data-testid="wiki-title"]').setValue('Haunted Cave')
+    await w.find('[data-testid="editor-textarea"]').setValue('# Boo!')
+    await w.find('[data-testid="wiki-save"]').trigger('click')
+    expect(w.emitted('save')![0][0]).toEqual({
+      title: 'Haunted Cave', content: '# Boo!', path: 'locations.haunted_cave',
     })
   })
 
-  it('binds initial props', () => {
-    const wrapper = mountComponent('Prefilled', '# Content', 'prefilled.path')
-    const el = wrapper.find('[data-testid="wiki-title"]').element as HTMLInputElement
-    expect(el.value).toBe('Prefilled')
+  it('generates root-level path when no parent selected', async () => {
+    const w = mountComponent({ parentOptions: mockFolders })
+    await w.find('[data-testid="wiki-title"]').setValue('Root Node')
+    await w.find('[data-testid="wiki-save"]').trigger('click')
+    expect(w.emitted('save')![0][0].path).toBe('root_node')
+  })
+
+  it('pre-selects correct parent when editing (initialPath)', () => {
+    const w = mountComponent({ parentOptions: mockFolders, initialPath: 'locations.forest' })
+    expect((w.find('[data-testid="wiki-parent"]').element as HTMLSelectElement).value).toBe('locations')
+  })
+
+  it('binds initial title prop', () => {
+    const w = mountComponent({ initialTitle: 'Prefilled' })
+    expect((w.find('[data-testid="wiki-title"]').element as HTMLInputElement).value).toBe('Prefilled')
   })
 })

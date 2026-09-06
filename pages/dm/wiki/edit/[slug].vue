@@ -9,6 +9,7 @@
       :initial-title="initialTitle"
       :initial-content="initialContent"
       :initial-path="initialPath"
+      :parent-options="parentOptions"
       @save="handleSave"
     />
 
@@ -43,6 +44,7 @@ const initialContent = ref('')
 const initialPath = ref('')
 const editingNodeId = ref<string | null>(null)
 const loading = ref(true)
+const parentOptions = ref<WikiNode[]>([])
 
 const ltreePath = computed(() => {
   const slug = route.params.slug as string
@@ -51,13 +53,17 @@ const ltreePath = computed(() => {
 
 async function loadExistingNode() {
   try {
-    const node = await wikiService.findByPath(ltreePath.value)
+    const [node, folders] = await Promise.all([
+      wikiService.findByPath(ltreePath.value),
+      wikiService.getNodeTree(''),
+    ])
     if (node) {
       editingNodeId.value = node.id
       initialTitle.value = node.title
       initialContent.value = node.content
       initialPath.value = node.path
     }
+    parentOptions.value = folders
   } catch {
     showError('Failed to load node for editing.')
   } finally {

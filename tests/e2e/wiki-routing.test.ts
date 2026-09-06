@@ -42,9 +42,9 @@ test('Create this page navigates to editor without 404', async ({ page }) => {
   // Verify the save button is also present (proves full component tree loaded)
   await expect(page.getByTestId('wiki-save')).toBeVisible({ timeout: 5000 })
 
-  // No 404 or Vue Router errors
-  const relevantErrors = consoleErrors.filter(e => e.includes('404') || e.includes('No match found'))
-  expect(relevantErrors).toHaveLength(0)
+  // No Vue Router "No match found" errors (API 404s from Supabase are expected in e2e)
+  const routerErrors = consoleErrors.filter(e => e.includes('No match found'))
+  expect(routerErrors).toHaveLength(0)
 })
 
 test('/wiki/nonexistent shows not-found with create link', async ({ page }) => {

@@ -6,6 +6,7 @@
       :initial-title="initialTitle"
       :initial-content="initialContent"
       :initial-path="initialPath"
+      :parent-options="parentOptions"
       @save="handleSave"
     />
 

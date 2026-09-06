@@ -14,11 +14,14 @@ const mockFindByPath = vi.fn()
 const mockCreateNode = vi.fn()
 const mockUpdateNode = vi.fn()
 
+const mockGetDescendants = vi.fn()
+
 vi.mock('~/composables/useWikiService', () => ({
   useWikiService: () => ({
     findByPath: mockFindByPath,
     createNode: mockCreateNode,
     updateNode: mockUpdateNode,
+    getNodeTree: mockGetDescendants,
   }),
 }))
 
@@ -153,6 +156,7 @@ describe('Issue #16: Editor Data-Binding & Save Flow', () => {
 
     it('loads existing node data on mount', async () => {
       mockFindByPath.mockResolvedValue(existingNode)
+      mockGetDescendants.mockResolvedValue([])
 
       mountEditPage('campaign.old')
       await new Promise(r => setTimeout(r, 10))
@@ -162,6 +166,7 @@ describe('Issue #16: Editor Data-Binding & Save Flow', () => {
 
     it('calls WikiService.updateNode on save', async () => {
       mockFindByPath.mockResolvedValue(existingNode)
+      mockGetDescendants.mockResolvedValue([])
       mockUpdateNode.mockResolvedValue({
         ...existingNode,
         title: 'Test Node',
