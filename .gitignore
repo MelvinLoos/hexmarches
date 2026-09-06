@@ -27,3 +27,6 @@ skills-lock.json
 # Logs
 *.log
 npm-debug.log*
+
+# Test artifacts
+junit.xml

@@ -28,7 +28,15 @@ jobs:
         run: npm ci
 
       - name: Run TDD suite
-        run: npm run test
+        run: npx vitest run --reporter=verbose --reporter=junit --outputFile.junit=junit.xml
+
+      - name: Publish test results
+        uses: dorny/test-reporter@v1
+        if: success() || failure()
+        with:
+          name: Vitest Results
+          path: junit.xml
+          reporter: java-junit
 
       - name: Build Nuxt application
         run: npm run build
