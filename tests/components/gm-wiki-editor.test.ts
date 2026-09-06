@@ -94,9 +94,9 @@ describe('GmWikiEditor.vue — Parent Selector UI', () => {
     await w.find('[data-testid="wiki-title"]').setValue('Haunted Cave')
     await w.find('[data-testid="editor-textarea"]').setValue('# Boo!')
     await w.find('[data-testid="wiki-save"]').trigger('click')
-    expect(w.emitted('save')![0][0]).toEqual({
+    expect(w.emitted('save')![0][0]).toEqual(expect.objectContaining({
       title: 'Haunted Cave', content: '# Boo!', path: 'locations.haunted_cave',
-    })
+    }))
   })
 
   it('generates root-level path when no parent selected', async () => {
@@ -114,5 +114,53 @@ describe('GmWikiEditor.vue — Parent Selector UI', () => {
   it('binds initial title prop', () => {
     const w = mountComponent({ initialTitle: 'Prefilled' })
     expect((w.find('[data-testid="wiki-title"]').element as HTMLInputElement).value).toBe('Prefilled')
+  })
+// ─── Issue #28: Task 3 — Cover Image & Entity Type ────────────────
+  describe('Cover Image Dropzone', () => {
+    it('renders a cover image URL input', () => {
+      const w = mountComponent({ parentOptions: mockFolders })
+      expect(w.find('[data-testid="wiki-cover-image"]').exists()).toBe(true)
+    })
+
+    it('renders a file upload dropzone', () => {
+      const w = mountComponent({ parentOptions: mockFolders })
+      expect(w.find('[data-testid="wiki-cover-dropzone"]').exists()).toBe(true)
+    })
+
+    it('emits coverImageUrl in save payload', async () => {
+      const w = mountComponent({ parentOptions: mockFolders })
+      await w.find('[data-testid="wiki-title"]').setValue('Dark Forest')
+      await w.find('[data-testid="wiki-cover-image"]').setValue('https://cdn.example.com/forest.jpg')
+      await w.find('[data-testid="wiki-save"]').trigger('click')
+      expect(w.emitted('save')![0][0].coverImageUrl).toBe('https://cdn.example.com/forest.jpg')
+    })
+  })
+
+  describe('Entity Type Dropdown', () => {
+    it('renders an entity type select dropdown', () => {
+      const w = mountComponent({ parentOptions: mockFolders })
+      expect(w.find('[data-testid="wiki-entity-type"]').exists()).toBe(true)
+    })
+
+    it('renders all six WikiNodeType options', () => {
+      const w = mountComponent({ parentOptions: mockFolders })
+      const select = w.find('[data-testid="wiki-entity-type"]')
+      const options = select.findAll('option')
+      const optionTexts = options.map(o => o.text())
+      expect(optionTexts).toContain('GENERAL')
+      expect(optionTexts).toContain('LOCATION')
+      expect(optionTexts).toContain('NPC')
+      expect(optionTexts).toContain('FACTION')
+      expect(optionTexts).toContain('ITEM')
+      expect(optionTexts).toContain('QUEST')
+    })
+
+    it('emits entityType in save payload', async () => {
+      const w = mountComponent({ parentOptions: mockFolders })
+      await w.find('[data-testid="wiki-title"]').setValue('Dark Forest')
+      await w.find('[data-testid="wiki-entity-type"]').setValue('LOCATION')
+      await w.find('[data-testid="wiki-save"]').trigger('click')
+      expect(w.emitted('save')![0][0].entityType).toBe('LOCATION')
+    })
   })
 })
