@@ -33,4 +33,10 @@ export default defineNuxtConfig({
       map: {},
     },
   },
+
+  vite: {
+    optimizeDeps: {
+      include: ['md-editor-v3'],
+    },
+  },
 })

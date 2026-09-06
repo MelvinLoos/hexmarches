@@ -4,7 +4,7 @@ import { defineComponent, h } from 'vue'
 import GmWikiEditor from '~/presentation/components/GmWikiEditor.client.vue'
 
 vi.mock('md-editor-v3', () => ({
-  default: defineComponent({
+  MdEditor: defineComponent({
     name: 'MdEditor',
     props: {
       modelValue: String,
