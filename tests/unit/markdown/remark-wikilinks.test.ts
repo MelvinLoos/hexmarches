@@ -41,7 +41,7 @@ describe('Issue #30: Remark Plugin for Wiki-Links', () => {
     })
 
     expect(linkNodes).toHaveLength(2)
-    const urls = linkNodes.map((n: { url: string }) => n.url)
+    const urls = (linkNodes as Array<{ url: string }>).map((n) => n.url)
     expect(urls).toContain('/wiki/locations')
     expect(urls).toContain('/wiki/npcs')
   })

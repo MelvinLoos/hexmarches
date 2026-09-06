@@ -6,8 +6,8 @@
 //   The conversion of [[Wiki-Links]] to Nuxt routing links must occur
 //   exclusively during server-side Markdown-to-AST compilation.
 
-import { visit, type Visitor } from 'unist-util-visit'
-import type { Root, Text, Link, Paragraph } from 'mdast'
+import { visit } from 'unist-util-visit'
+import type { Root, Text, Link } from 'mdast'
 import { slugifyTitle } from '../../core/domain/wiki-node'
 
 // Regex to match [[Node Title]] patterns
@@ -21,8 +21,8 @@ const WIKI_LINK_RE = /\[\[([^\]]+)\]\]/g
 export function remarkWikiLinks() {
   return (tree: Root) => {
     // Use transform function type that works with mdast types
-    visit(tree, 'paragraph', (node: Paragraph, index: number | null, parent: Root | null) => {
-      if (!parent || index === null || index === undefined) return
+    visit(tree, 'paragraph', (node, index, parent) => {
+      if (!parent || typeof index !== 'number') return
 
       const newChildren: (Text | Link)[] = []
 

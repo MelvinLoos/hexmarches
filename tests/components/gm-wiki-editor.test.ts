@@ -27,12 +27,14 @@ const mockFolders: WikiNode[] = [
   { id: '3', title: 'Dark Forest', content: '# Forest', path: 'locations.forest', createdAt: new Date(), updatedAt: new Date() },
 ]
 
-function mountComponent(props: Record<string, unknown> = {}) {
+function mountComponent(overrides: Record<string, unknown> = {}) {
   return mount(GmWikiEditor, { props: {
-    initialTitle: props.initialTitle ?? '',
-    initialContent: props.initialContent ?? '',
-    initialPath: props.initialPath ?? '',
-    parentOptions: props.parentOptions ?? [],
+    initialTitle: (overrides.initialTitle as string) ?? '',
+    initialContent: (overrides.initialContent as string) ?? '',
+    initialPath: (overrides.initialPath as string) ?? '',
+    initialCoverImageUrl: (overrides.initialCoverImageUrl as string) ?? '',
+    initialEntityType: (overrides.initialEntityType as string) ?? '',
+    parentOptions: (overrides.parentOptions as WikiNode[]) ?? [],
   }})
 }
 
@@ -94,7 +96,8 @@ describe('GmWikiEditor.vue — Parent Selector UI', () => {
     await w.find('[data-testid="wiki-title"]').setValue('Haunted Cave')
     await w.find('[data-testid="editor-textarea"]').setValue('# Boo!')
     await w.find('[data-testid="wiki-save"]').trigger('click')
-    expect(w.emitted('save')![0][0]).toEqual(expect.objectContaining({
+    const emitPayload = ((w.emitted('save') as unknown[][])[0]?.[0]) as Record<string, unknown>
+    expect(emitPayload).toEqual(expect.objectContaining({
       title: 'Haunted Cave', content: '# Boo!', path: 'locations.haunted_cave',
     }))
   })
@@ -103,7 +106,8 @@ describe('GmWikiEditor.vue — Parent Selector UI', () => {
     const w = mountComponent({ parentOptions: mockFolders })
     await w.find('[data-testid="wiki-title"]').setValue('Root Node')
     await w.find('[data-testid="wiki-save"]').trigger('click')
-    expect(w.emitted('save')![0][0].path).toBe('root_node')
+    const payload = ((w.emitted('save') as unknown[][])[0]?.[0]) as Record<string, unknown>
+    expect(payload.path).toBe('root_node')
   })
 
   it('pre-selects correct parent when editing (initialPath)', () => {
@@ -132,7 +136,8 @@ describe('GmWikiEditor.vue — Parent Selector UI', () => {
       await w.find('[data-testid="wiki-title"]').setValue('Dark Forest')
       await w.find('[data-testid="wiki-cover-image"]').setValue('https://cdn.example.com/forest.jpg')
       await w.find('[data-testid="wiki-save"]').trigger('click')
-      expect(w.emitted('save')![0][0].coverImageUrl).toBe('https://cdn.example.com/forest.jpg')
+      const savePayload = ((w.emitted('save') as unknown[][])[0]?.[0]) as Record<string, unknown>
+      expect(savePayload.coverImageUrl).toBe('https://cdn.example.com/forest.jpg')
     })
   })
 
@@ -160,7 +165,8 @@ describe('GmWikiEditor.vue — Parent Selector UI', () => {
       await w.find('[data-testid="wiki-title"]').setValue('Dark Forest')
       await w.find('[data-testid="wiki-entity-type"]').setValue('LOCATION')
       await w.find('[data-testid="wiki-save"]').trigger('click')
-      expect(w.emitted('save')![0][0].entityType).toBe('LOCATION')
+      const payload3 = ((w.emitted('save') as unknown[][])[0]?.[0]) as Record<string, unknown>
+      expect(payload3.entityType).toBe('LOCATION')
     })
   })
 })
