@@ -108,6 +108,7 @@
         theme="dark"
         language="en-US"
         preview-theme="github"
+        :markdown-it-config="configureMarkdownIt"
         @on-upload-img="handleUploadImage"
       />
 
@@ -154,6 +155,7 @@ import 'md-editor-v3/lib/style.css'
 import { useDebounceFn, onClickOutside } from '@vueuse/core'
 import { useWikiService } from '~/composables/useWikiService'
 import { useCommandPalette } from '~/composables/useCommandPalette'
+import { markdownItWikiLinks } from '~/src/presentation/markdown/markdown-it-wikilinks'
 import type { WikiNode } from '~/src/core/domain/wiki-node'
 import { generateChildPath, WikiNodeType } from '~/src/core/domain/wiki-node'
 import type { WikiNodeSearchResult } from '~/src/core/domain/wiki-repository'
@@ -188,6 +190,11 @@ function extractParentPath(fullPath: string): string {
   const parts = fullPath.split('.')
   if (parts.length <= 1) return ''
   return parts.slice(0, -1).join('.')
+}
+
+// ── markdown-it preview config ─────────────────────────────────────
+function configureMarkdownIt(md: any) {
+  md.use(markdownItWikiLinks)
 }
 
 const selectedParent = ref(extractParentPath(props.initialPath ?? ''))

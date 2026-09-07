@@ -7,7 +7,13 @@ import type { WikiNode } from '~/src/core/domain/wiki-node'
 vi.mock('md-editor-v3', () => ({
   MdEditor: defineComponent({
     name: 'MdEditor',
-    props: { modelValue: String, theme: String, language: String, previewTheme: String },
+    props: {
+      modelValue: String,
+      theme: String,
+      language: String,
+      previewTheme: String,
+      markdownItConfig: Function,
+    },
     emits: ['update:modelValue'],
     setup(props, { emit, expose }) {
       const insert = vi.fn()
@@ -331,6 +337,17 @@ describe('GmWikiEditor.vue — Parent Selector UI', () => {
       // The picklist should have contextual positioning (class exists)
       const classes = picklist.attributes('class') || ''
       expect(classes).toContain('autocomplete-picklist')
+    })
+
+    // ── Issue #46: markdown-it preview parity ──────────────────────
+    it('transforms [[Title]] in preview via markdown-it plugin', () => {
+      // Mount with content containing [[Gandalf]]
+      const w = mountComponent({ parentOptions: mockFolders, initialContent: 'Meet [[Gandalf]] the wizard.' })
+      // The editor should have a markdownItConfig prop passed
+      const mdEditor = w.findComponent({ name: 'MdEditor' })
+      expect(mdEditor.exists()).toBe(true)
+      // Check that markdownItConfig prop was passed
+      expect(mdEditor.props('markdownItConfig')).toBeDefined()
     })
 
     it('closes picklist when Insert Wiki Link button is clicked again', async () => {
