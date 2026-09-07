@@ -9,41 +9,41 @@ import type { Root } from 'mdast'
 // AST transformation tests proving [[Node Title]] → NuxtLink AST structure.
 
 describe('Issue #30: Remark Plugin for Wiki-Links', () => {
-  it('should transform [[Node Title]] into inline MDC component syntax', async () => {
+  it('should transform [[Node Title]] into html AST node with wiki-link tag', async () => {
     const input = 'Check out [[The Harpers]] for more info.'
     const processor = unified().use(remarkParse).use(remarkWikiLinks)
     const parsed = processor.parse(input)
     const ast = (await processor.run(parsed)) as Root
 
     const { visit } = await import('unist-util-visit')
-    const textNodes: string[] = []
-    visit(ast, 'text', (node: unknown) => {
+    const htmlNodes: string[] = []
+    visit(ast, 'html', (node: unknown) => {
       const n = node as { value: string }
-      textNodes.push(n.value)
+      htmlNodes.push(n.value)
     })
 
-    const combined = textNodes.join('')
-    expect(combined).toContain(':wiki-link{title="The Harpers"}')
+    expect(htmlNodes).toHaveLength(1)
+    expect(htmlNodes[0]).toBe('<wiki-link title="The Harpers"></wiki-link>')
     // Should NOT contain hardcoded /wiki/the_harpers URL
-    expect(combined).not.toContain('/wiki/the_harpers')
+    expect(htmlNodes[0]).not.toContain('/wiki/the_harpers')
   })
 
-  it('should transform multiple wiki-links into MDC inline components', async () => {
+  it('should transform multiple wiki-links into html AST nodes', async () => {
     const input = '[[Locations]] visited by [[NPCs]] are marked.'
     const processor = unified().use(remarkParse).use(remarkWikiLinks)
     const parsed = processor.parse(input)
     const ast = (await processor.run(parsed)) as Root
 
     const { visit } = await import('unist-util-visit')
-    const textNodes: string[] = []
-    visit(ast, 'text', (node: unknown) => {
+    const htmlNodes: string[] = []
+    visit(ast, 'html', (node: unknown) => {
       const n = node as { value: string }
-      textNodes.push(n.value)
+      htmlNodes.push(n.value)
     })
 
-    const combined = textNodes.join('')
-    expect(combined).toContain(':wiki-link{title="Locations"}')
-    expect(combined).toContain(':wiki-link{title="NPCs"}')
+    expect(htmlNodes).toHaveLength(2)
+    expect(htmlNodes).toContain('<wiki-link title="Locations"></wiki-link>')
+    expect(htmlNodes).toContain('<wiki-link title="NPCs"></wiki-link>')
   })
 
   it('should not transform regular text without [[ ]] brackets', async () => {
@@ -63,13 +63,13 @@ describe('Issue #30: Remark Plugin for Wiki-Links', () => {
     const linkNode = linkNodes[0] as { url: string }
     expect(linkNode.url).toBe('https://example.com')
 
-    // No wiki-link MDC syntax in text
-    const textNodes: string[] = []
-    visit(ast, 'text', (node: unknown) => {
+    // No wiki-link html nodes
+    const htmlNodes: string[] = []
+    visit(ast, 'html', (node: unknown) => {
       const n = node as { value: string }
-      if (n.value.includes(':wiki-link')) textNodes.push(n.value)
+      if (n.value.includes('wiki-link')) htmlNodes.push(n.value)
     })
-    expect(textNodes).toHaveLength(0)
+    expect(htmlNodes).toHaveLength(0)
   })
 
   it('should handle empty wiki-link gracefully', async () => {
@@ -79,14 +79,14 @@ describe('Issue #30: Remark Plugin for Wiki-Links', () => {
     const ast = (await processor.run(parsed)) as Root
 
     const { visit } = await import('unist-util-visit')
-    const textNodes: string[] = []
-    visit(ast, 'text', (node: unknown) => {
+    const htmlNodes: string[] = []
+    visit(ast, 'html', (node: unknown) => {
       const n = node as { value: string }
-      if (n.value.includes(':wiki-link')) textNodes.push(n.value)
+      if (n.value.includes('wiki-link')) htmlNodes.push(n.value)
     })
 
-    // No wiki-link MDC should be generated for empty [[]]
-    expect(textNodes).toHaveLength(0)
+    // No wiki-link should be generated for empty [[]]
+    expect(htmlNodes).toHaveLength(0)
   })
 
   it('should map node titles correctly via slugifyTitle', () => {
