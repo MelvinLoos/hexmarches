@@ -33,12 +33,13 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useWikiService } from '~/composables/useWikiService'
 import { useToast } from '~/composables/useToast'
 import type { WikiNode } from '~/src/core/domain/wiki-node'
 
 const route = useRoute()
+const router = useRouter()
 const wikiService = useWikiService()
 const { toasts, success: showSuccess, error: showError } = useToast()
 
@@ -52,8 +53,10 @@ const loading = ref(true)
 const parentOptions = ref<WikiNode[]>([])
 
 const ltreePath = computed(() => {
-  const slug = route.params.slug as string
-  return slug || ''
+  const slug = route.params.slug as string | string[]
+  if (!slug) return ''
+  const segments = Array.isArray(slug) ? slug : [slug].filter(Boolean)
+  return segments.join('.')
 })
 
 async function loadExistingNode() {
@@ -89,6 +92,9 @@ async function handleSave(payload: { title: string; content: string; path: strin
         entityType: payload.entityType,
       })
       showSuccess(`"${payload.title}" updated successfully!`)
+      // Redirect to the wiki viewer page after update
+      const wikiUrl = `/wiki/${payload.path.replace(/\./g, '/')}`
+      router.push(wikiUrl)
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'

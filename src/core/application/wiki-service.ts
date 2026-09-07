@@ -94,6 +94,18 @@ export class WikiService {
     return this.repo.getDescendants(path)
   }
 
+  async findById(id: string): Promise<WikiNode | null> {
+    return this.repo.findById(id)
+  }
+
+  async findByPath(path: string): Promise<WikiNode | null> {
+    if (path === '') return null
+    if (!validateLtreePath(path)) {
+      throw new LtreeValidationError(path)
+    }
+    return this.repo.findByPath(path)
+  }
+
   async searchNodes(query: string, limit?: number): Promise<WikiNodeSearchResult[]> {
     // Sanitize the search query
     const sanitizedQuery = sanitizeMarkdown(query)

@@ -2,18 +2,26 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount, RouterLinkStub } from '@vue/test-utils'
 import type { WikiNode } from '~/src/core/domain/wiki-node'
 
-// ─── Issue #16: Task 4 — Editor Data-Binding & Save Flow ─────────────────────
-// AC1: Simulates save event and asserts WikiService mock called with correct payload
-// AC2: Success toast shown after save
-// AC3: Error toast shown on failure
-// AC4: When editing existing node (slug present), pre-fills editor
-// AC5: When creating new (no slug), editor starts empty
+// ─── Mock router.push for redirect tests ──────────────────────────
+const mockRouterPush = vi.fn()
 
-// ─── Mock WikiService ──────────────────────────────────────────────────
+vi.mock('vue-router', async () => {
+  const actual = await vi.importActual('vue-router')
+  return {
+    ...actual,
+    useRoute: () => ({
+      params: mockRouteData,
+    }),
+    useRouter: () => ({
+      push: mockRouterPush,
+    }),
+  }
+})
+
+// ─── Mock WikiService ──────────────────────────────────────────────
 const mockFindByPath = vi.fn()
 const mockCreateNode = vi.fn()
 const mockUpdateNode = vi.fn()
-
 const mockGetDescendants = vi.fn()
 
 vi.mock('~/composables/useWikiService', () => ({
@@ -25,24 +33,14 @@ vi.mock('~/composables/useWikiService', () => ({
   }),
 }))
 
-// ─── Mocks ─────────────────────────────────────────────────────────────
-const mockRouteData = { slug: [] as string[] }
-
-vi.mock('vue-router', () => ({
-  useRoute: () => ({
-    params: mockRouteData,
-  }),
-  useRouter: () => ({
-    push: vi.fn(),
-  }),
-}))
-
 vi.mock('#imports', () => ({
-  navigateTo: vi.fn(),
   useSupabaseClient: () => ({}),
 }))
 
-// ─── Stubs ─────────────────────────────────────────────────────────────
+// ─── Mock route params for edit page ───────────────────────────────
+const mockRouteData = { slug: [] as string[] }
+
+// ─── Stubs ─────────────────────────────────────────────────────────
 const EditorStub = {
   template: `<div data-testid="gm-wiki-editor">
     <button data-testid="trigger-save" @click="$emit('save', { title: 'Test Node', content: '# Hello', path: 'test.hello' })">Save</button>
@@ -53,7 +51,7 @@ const EditorStub = {
 }
 
 import EditCreatePage from '../../pages/dm/wiki/edit/index.vue'
-import EditSlugPage from '../../pages/dm/wiki/edit/[slug].vue'
+import EditSlugPage from '../../pages/dm/wiki/edit/[...slug].vue'
 
 function mountCreatePage() {
   return mount(EditCreatePage, {
@@ -66,7 +64,7 @@ function mountCreatePage() {
   })
 }
 
-function mountEditPage(slug: string = 'campaign.old') {
+function mountEditPage(slug: string[] = ['campaign', 'old']) {
   mockRouteData.slug = slug
 
   return mount(EditSlugPage, {
@@ -142,6 +140,25 @@ describe('Issue #16: Editor Data-Binding & Save Flow', () => {
       const toast = wrapper.find('[data-testid="toast-error"]')
       expect(toast.exists()).toBe(true)
     })
+
+    // ANTI-REGRESSION: should navigate after successful create
+    it('should navigate to wiki viewer page after successful create', async () => {
+      mockCreateNode.mockResolvedValue({
+        id: 'new-1',
+        title: 'Test Node',
+        content: '# Hello',
+        path: 'test.hello',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+
+      const wrapper = mountCreatePage()
+      await wrapper.find('[data-testid="trigger-save"]').trigger('click')
+      await new Promise(r => setTimeout(r, 20))
+      await wrapper.vm.$nextTick()
+
+      expect(mockRouterPush).toHaveBeenCalledWith('/wiki/test/hello')
+    })
   })
 
   describe('Editing an existing node (with slug)', () => {
@@ -154,14 +171,25 @@ describe('Issue #16: Editor Data-Binding & Save Flow', () => {
       updatedAt: new Date('2025-01-01'),
     }
 
-    it('loads existing node data on mount', async () => {
+    it('joins multi-segment slug array into ltree path', async () => {
       mockFindByPath.mockResolvedValue(existingNode)
       mockGetDescendants.mockResolvedValue([])
 
-      mountEditPage('campaign.old')
+      mountEditPage(['campaign', 'old'])
       await new Promise(r => setTimeout(r, 10))
 
       expect(mockFindByPath).toHaveBeenCalledWith('campaign.old')
+    })
+
+    it('handles single-segment slug as ltree path', async () => {
+      const rootNode: WikiNode = { ...existingNode, path: 'campaign' }
+      mockFindByPath.mockResolvedValue(rootNode)
+      mockGetDescendants.mockResolvedValue([])
+
+      mountEditPage(['campaign'])
+      await new Promise(r => setTimeout(r, 10))
+
+      expect(mockFindByPath).toHaveBeenCalledWith('campaign')
     })
 
     it('calls WikiService.updateNode on save', async () => {
@@ -174,7 +202,7 @@ describe('Issue #16: Editor Data-Binding & Save Flow', () => {
         updatedAt: new Date(),
       })
 
-      const wrapper = mountEditPage('campaign.old')
+      const wrapper = mountEditPage(['campaign', 'old'])
       await new Promise(r => setTimeout(r, 10))
       await wrapper.vm.$nextTick()
 
@@ -186,6 +214,29 @@ describe('Issue #16: Editor Data-Binding & Save Flow', () => {
         content: '# Hello',
         path: 'test.hello',
       })
+    })
+
+    // ANTI-REGRESSION: should navigate after successful update
+    it('should navigate to wiki viewer page after successful update', async () => {
+      mockFindByPath.mockResolvedValue(existingNode)
+      mockGetDescendants.mockResolvedValue([])
+      mockUpdateNode.mockResolvedValue({
+        ...existingNode,
+        title: 'Test Node',
+        content: '# Hello',
+        path: 'test.hello',
+        updatedAt: new Date(),
+      })
+
+      const wrapper = mountEditPage(['campaign', 'old'])
+      await new Promise(r => setTimeout(r, 10))
+      await wrapper.vm.$nextTick()
+
+      await wrapper.find('[data-testid="trigger-save"]').trigger('click')
+      await new Promise(r => setTimeout(r, 20))
+      await wrapper.vm.$nextTick()
+
+      expect(mockRouterPush).toHaveBeenCalledWith('/wiki/test/hello')
     })
   })
 })

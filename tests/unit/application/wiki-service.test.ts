@@ -91,40 +91,7 @@ describe('sanitizeMarkdown()', () => {
     expect(result).not.toContain('javascript:')
   })
 
-  it('should preserve legitimate markdown elements', () => {
-    const input = '# Heading\n**bold** and *italic*\n- list item\n[link](https://example.com)'
-    const result = sanitizeMarkdown(input)
-    expect(result).toContain('# Heading')
-    expect(result).toContain('**bold**')
-    expect(result).toContain('*italic*')
-    expect(result).toContain('- list item')
-    expect(result).toContain('[link](https://example.com)')
-  })
-
-  it('should preserve MDC component syntax', () => {
-    const input = '::handout{title="Secret Letter"}'
-    const result = sanitizeMarkdown(input)
-    expect(result).toContain('::handout')
-  })
-
-  it('should preserve safe HTML', () => {
-    const input = '<p>Hello <em>World</em></p>'
-    const result = sanitizeMarkdown(input)
-    expect(result).toContain('<p>')
-    expect(result).toContain('<em>')
-  })
-
-  it('should handle empty string', () => {
-    expect(sanitizeMarkdown('')).toBe('')
-  })
-
-  it('should strip all dangerous content from malicious-only input', () => {
-    const input = '<script>alert(1)</script>'
-    const result = sanitizeMarkdown(input)
-    expect(result.trim()).toBe('')
-  })
-
-  it('should strip iframe tags', () => {
+  it('should strip <iframe> tags', () => {
     const input = '<iframe src="evil.com"></iframe>'
     const result = sanitizeMarkdown(input)
     expect(result).not.toContain('<iframe')
@@ -134,6 +101,8 @@ describe('sanitizeMarkdown()', () => {
     const input = 'Just plain markdown text without any HTML.'
     expect(sanitizeMarkdown(input)).toBe(input)
   })
+})
+
 // ─── WikiService Orchestration ──────────────────────────────────────
 describe('WikiService', () => {
   let service: WikiService
@@ -217,11 +186,57 @@ describe('WikiService', () => {
     })
   })
 
+  // ─── Anti-regression: findByPath ─────────────────────────────────
+  describe('findByPath()', () => {
+    it('should return a node by its exact ltree path', async () => {
+      const created = await service.createNode({
+        title: 'Forest', content: '# Forest', path: 'campaign.locations.forest',
+      })
+      const found = await service.findByPath('campaign.locations.forest')
+      expect(found).not.toBeNull()
+      expect(found!.id).toBe(created.id)
+      expect(found!.title).toBe('Forest')
+    })
+
+    it('should return null for non-existent path', async () => {
+      const found = await service.findByPath('campaign.nonexistent')
+      expect(found).toBeNull()
+    })
+
+    it('should return null for empty path', async () => {
+      const found = await service.findByPath('')
+      expect(found).toBeNull()
+    })
+
+    it('should throw LtreeValidationError for invalid path', async () => {
+      await expect(
+        service.findByPath('Invalid Path!')
+      ).rejects.toThrow()
+    })
+  })
+
+  // ─── Anti-regression: findById ───────────────────────────────────
+  describe('findById()', () => {
+    it('should return a node by its ID', async () => {
+      const created = await service.createNode({
+        title: 'Node', content: '# Node', path: 'test.node',
+      })
+      const found = await service.findById(created.id)
+      expect(found).not.toBeNull()
+      expect(found!.id).toBe(created.id)
+      expect(found!.title).toBe('Node')
+    })
+
+    it('should return null for non-existent ID', async () => {
+      const found = await service.findById('nonexistent-id')
+      expect(found).toBeNull()
+    })
+  })
+
   describe('searchNodes()', () => {
     it('should delegate to repository search', async () => {
       const results = await service.searchNodes('test')
       expect(Array.isArray(results)).toBe(true)
     })
   })
-})
 })

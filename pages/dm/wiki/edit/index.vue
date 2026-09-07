@@ -28,10 +28,12 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useWikiService } from '~/composables/useWikiService'
 import { useToast } from '~/composables/useToast'
 import type { WikiNode } from '~/src/core/domain/wiki-node'
 
+const router = useRouter()
 const wikiService = useWikiService()
 const { toasts, success: showSuccess, error: showError } = useToast()
 
@@ -58,6 +60,9 @@ async function handleSave(payload: { title: string; content: string; path: strin
       entityType: payload.entityType,
     })
     showSuccess(`"${payload.title}" created successfully!`)
+    // Redirect to the wiki viewer page after creation
+    const wikiUrl = `/wiki/${payload.path.replace(/\./g, '/')}`
+    router.push(wikiUrl)
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     showError(`Save failed: ${message}`)
