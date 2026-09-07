@@ -21,6 +21,21 @@ vi.mock('md-editor-v3', () => ({
   }),
 }))
 
+// ── Mock useWikiService ──────────────────────────────────────────────
+vi.mock('~/composables/useWikiService', () => ({
+  useWikiService: () => ({
+    searchNodes: vi.fn().mockResolvedValue([]),
+    getInboundReferences: vi.fn().mockResolvedValue([]),
+    findInboundReferences: vi.fn().mockResolvedValue([]),
+  }),
+}))
+
+// ── Mock @vueuse/core ───────────────────────────────────────────────
+vi.mock('@vueuse/core', () => ({
+  useDebounceFn: (fn: Function, _ms: number) => fn,
+  onClickOutside: () => {},
+}))
+
 const mockFolders: WikiNode[] = [
   { id: '1', title: 'Locations', content: '', path: 'locations', createdAt: new Date(), updatedAt: new Date() },
   { id: '2', title: 'Factions', content: '', path: 'factions', createdAt: new Date(), updatedAt: new Date() },
@@ -232,6 +247,49 @@ describe('GmWikiEditor.vue — Parent Selector UI', () => {
       await w.find('[data-testid="wiki-save"]').trigger('click')
       const payload3 = ((w.emitted('save') as unknown[][])[0]?.[0]) as Record<string, unknown>
       expect(payload3.entityType).toBe('LOCATION')
+    })
+  })
+
+  // ── Issue #41: Wiki-Link Autocomplete ───────────────────────────
+  describe('Wiki-Link Autocomplete', () => {
+    it('shows picklist when [[ is typed in editor', async () => {
+      const w = mountComponent({ parentOptions: mockFolders })
+      const textarea = w.find('[data-testid="editor-textarea"]')
+      await textarea.setValue('The party went to [[')
+      await w.vm.$nextTick()
+      await w.vm.$nextTick()
+      expect(w.find('[data-testid="wiki-autocomplete-picklist"]').exists()).toBe(true)
+    })
+
+    it('does not show picklist for normal text', async () => {
+      const w = mountComponent({ parentOptions: mockFolders })
+      const textarea = w.find('[data-testid="editor-textarea"]')
+      await textarea.setValue('The party went to the forest')
+      await w.vm.$nextTick()
+      await w.vm.$nextTick()
+      expect(w.find('[data-testid="wiki-autocomplete-picklist"]').exists()).toBe(false)
+    })
+
+    it('hides picklist when Escape is pressed', async () => {
+      const w = mountComponent({ parentOptions: mockFolders })
+      const textarea = w.find('[data-testid="editor-textarea"]')
+      await textarea.setValue('The party went to [[')
+      await w.vm.$nextTick()
+      await w.vm.$nextTick()
+      expect(w.find('[data-testid="wiki-autocomplete-picklist"]').exists()).toBe(true)
+
+      // Trigger Escape on the editor wrapper that has @keydown handler
+      const editorWrapper = w.find('.editor-wrapper')
+      await editorWrapper.trigger('keydown', { key: 'Escape' })
+      await w.vm.$nextTick()
+      expect(w.find('[data-testid="wiki-autocomplete-picklist"]').exists()).toBe(false)
+    })
+
+    it('shows picklist when initialContent contains [[', async () => {
+      const w = mountComponent({ parentOptions: mockFolders, initialContent: 'The party went to [[' })
+      await w.vm.$nextTick()
+      await w.vm.$nextTick()
+      expect(w.find('[data-testid="wiki-autocomplete-picklist"]').exists()).toBe(true)
     })
   })
 })
