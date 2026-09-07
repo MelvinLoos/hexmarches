@@ -1,6 +1,6 @@
 <template>
   <div data-testid="cmd-palette-container" class="cmd-palette-container">
-    <-- Test FTS Modal: shown when Meta+K or Ctrl+K is pressed -->
+    <-- Command Palette Modal: shown when Meta+K or Ctrl+Shift+K is pressed or trigger button clicked -->
     <div v-if="visible" data-testid="cmd-palette-modal" class="cmd-palette-modal">
       <div data-testid="cmd-palette-backdrop" class="cmd-palette-backdrop" @click="close" />
       <div ref="modalRef" class="cmd-palette-content">
@@ -72,9 +72,12 @@ const groupedResults = computed(() => {
 
 const hasResults = computed(() => Array.isArray(results.value) ? results.value.length > 0 : false)
 
-// Watch magic keys: Meta+K or Ctrl+K to open, Escape to close
+// Watch magic keys: Meta+K or Ctrl+Shift+K to open, Escape to close
 watch(current, (keys) => {
-  if ((keys.has('Meta') || keys.has('Control')) && keys.has('k')) {
+  if (
+    (keys.has('Meta') && keys.has('k')) ||
+    (keys.has('Control') && keys.has('Shift') && keys.has('K'))
+  ) {
     visible.value = true
     query.value = ''
     results.value = []

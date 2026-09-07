@@ -291,5 +291,31 @@ describe('GmWikiEditor.vue — Parent Selector UI', () => {
       await w.vm.$nextTick()
       expect(w.find('[data-testid="wiki-autocomplete-picklist"]').exists()).toBe(true)
     })
+
+    it('shows picklist when Insert Wiki Link button is clicked', async () => {
+      const w = mountComponent({ parentOptions: mockFolders, initialContent: 'Some content' })
+      // Button should exist
+      const btn = w.find('[data-testid="wiki-insert-link-btn"]')
+      expect(btn.exists()).toBe(true)
+      // Click the button
+      await btn.trigger('click')
+      await w.vm.$nextTick()
+      await w.vm.$nextTick()
+      expect(w.find('[data-testid="wiki-autocomplete-picklist"]').exists()).toBe(true)
+    })
+
+    it('closes picklist when Insert Wiki Link button is clicked again', async () => {
+      const w = mountComponent({ parentOptions: mockFolders, initialContent: 'Some content' })
+      const btn = w.find('[data-testid="wiki-insert-link-btn"]')
+      // Open
+      await btn.trigger('click')
+      await w.vm.$nextTick()
+      await w.vm.$nextTick()
+      expect(w.find('[data-testid="wiki-autocomplete-picklist"]').exists()).toBe(true)
+      // Close
+      await btn.trigger('click')
+      await w.vm.$nextTick()
+      expect(w.find('[data-testid="wiki-autocomplete-picklist"]').exists()).toBe(false)
+    })
   })
 })

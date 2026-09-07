@@ -91,6 +91,17 @@
     </div>
 
     <div class="editor-wrapper" @keydown="onEditorKeydown">
+      <div class="editor-toolbar">
+        <button
+          data-testid="wiki-insert-link-btn"
+          class="insert-link-btn"
+          :class="{ active: showAutocomplete && insertMode }"
+          title="Insert Wiki Link (Ctrl+Shift+K)"
+          @click="toggleInsertLink"
+        >
+          🔗 Insert Wiki Link
+        </button>
+      </div>
       <MdEditor
         v-model="content"
         theme="dark"
@@ -176,6 +187,7 @@ const showAutocomplete = ref(false)
 const autocompleteQuery = ref('')
 const autocompleteResults = ref<WikiNodeSearchResult[]>([])
 const picklistRef = ref<HTMLElement | null>(null)
+const insertMode = ref(false) // true = manual insertion via button, false = [[-triggered
 
 // Regex to find an open [[ that hasn't been closed
 const wikilinkOpenRe = /\[\[([^[\]]*)$/
@@ -186,14 +198,23 @@ function extractAutocompleteQuery(text: string): string | null {
   return match ? match[1] : null
 }
 
-// Replace the open [[query with [[Title]] in the content
+// Replace the open [[query with [[Title]] in the content,
+// or append [[Title]] at end when in manual insert-mode.
 function injectWikilink(title: string) {
-  const match = content.value.match(wikilinkOpenRe)
-  if (!match) return
-  const before = content.value.slice(0, match.index!)
-  const after = content.value.slice(match.index! + match[0].length)
-  content.value = before + `[[${title}]]` + after
+  if (insertMode.value) {
+    // Manual insertion — append [[Title]] at end of content
+    const sep = content.value && !content.value.endsWith('\n') ? ' ' : ''
+    content.value = content.value + sep + `[[${title}]]`
+  } else {
+    // [[-triggered — replace the open [[query with [[Title]]
+    const match = content.value.match(wikilinkOpenRe)
+    if (!match) return
+    const before = content.value.slice(0, match.index!)
+    const after = content.value.slice(match.index! + match[0].length)
+    content.value = before + `[[${title}]]` + after
+  }
   showAutocomplete.value = false
+  insertMode.value = false
   autocompleteQuery.value = ''
   autocompleteResults.value = []
 }
@@ -213,6 +234,7 @@ const debouncedAutocomplete = useDebounceFn(async (query: string) => {
 
 // Watch content changes for [[ pattern
 watch(content, (val) => {
+  if (insertMode.value) return // Skip [[ detection when in manual insert mode
   const query = extractAutocompleteQuery(val)
   if (query !== null) {
     showAutocomplete.value = true
@@ -234,9 +256,27 @@ onClickOutside(picklistRef, () => {
 function onEditorKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape' && showAutocomplete.value) {
     showAutocomplete.value = false
+    insertMode.value = false
     autocompleteQuery.value = ''
     autocompleteResults.value = []
   }
+}
+
+// Toggle manual insert-link picklist
+function toggleInsertLink() {
+  if (showAutocomplete.value && insertMode.value) {
+    // Already showing in insert mode — close it
+    showAutocomplete.value = false
+    insertMode.value = false
+    autocompleteResults.value = []
+    return
+  }
+  insertMode.value = true
+  showAutocomplete.value = true
+  autocompleteQuery.value = ''
+  autocompleteResults.value = []
+  // Open with empty query to show all recent/available nodes
+  debouncedAutocomplete('')
 }
 
 // Select an autocomplete item
@@ -401,6 +441,35 @@ function handleSave() {
 }
 .save-button:hover {
   background: #f75973;
+}
+
+/* ── Editor Toolbar ──────────────────────────────────────────────── */
+.editor-toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.insert-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: #0f3460;
+  color: #a0a0b0;
+  border: 1px solid #0f3460;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.insert-link-btn:hover {
+  background: #1a5276;
+  color: #e0e0e0;
+}
+.insert-link-btn.active {
+  background: #e94560;
+  color: #fff;
+  border-color: #e94560;
 }
 
 /* ── Wiki-Link Autocomplete Styles ───────────────────────────────── */

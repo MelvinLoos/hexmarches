@@ -72,9 +72,9 @@ describe('Issue #39: Command Palette (Cmd+K)', () => {
       await nextTick()
       expect(wrapper.find('[data-testid="cmd-palette-modal"]').exists()).toBe(true)
     })
-    it('shows modal when Ctrl+K is pressed', async () => {
+    it('shows modal when Ctrl+Shift+K is pressed', async () => {
       const wrapper = mountPalette()
-      fakeMagicKeysCurrent.value = new Set(['Control', 'k'])
+      fakeMagicKeysCurrent.value = new Set(['Control', 'Shift', 'K'])
       await nextTick()
       expect(wrapper.find('[data-testid="cmd-palette-modal"]').exists()).toBe(true)
     })
