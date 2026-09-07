@@ -1,10 +1,12 @@
 // ─── GM Status Composable ──────────────────────────────────────────
 // Provides reactive isGm state for asymmetric security components.
-// In production, this would derive from Supabase user metadata/app_metadata.
+// Defaults to true until auth is fully wired — all users are effectively
+// GMs in the current development state. The auth-observer plugin will
+// override this based on actual Supabase auth state when login exists.
 
 import { ref } from 'vue'
 
-const isGm = ref(false)
+const isGm = ref(true)
 
 export function useGmStatus() {
   /**
