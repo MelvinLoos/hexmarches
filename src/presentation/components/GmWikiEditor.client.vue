@@ -113,33 +113,31 @@
       />
 
       <!-- Wiki-Link Autocomplete Picklist -->
-      <div
-        v-if="showAutocomplete"
-        ref="picklistRef"
-        data-testid="wiki-autocomplete-picklist"
-        class="autocomplete-picklist"
-      >
-        <input
-          v-if="insertMode"
-          v-model="autocompleteQuery"
-          data-testid="autocomplete-search-input"
-          type="text"
-          placeholder="Search wiki pages..."
-          class="autocomplete-search-input"
-          autofocus
-        />
-        <div
-          v-for="result in autocompleteResults"
-          :key="result.node.id"
-          data-testid="autocomplete-item"
-          class="autocomplete-item"
-          @mousedown.prevent="selectAutocompleteItem(result.node.title)"
-        >
-          <span class="autocomplete-title">{{ result.node.title }}</span>
-          <span class="autocomplete-type">{{ result.node.entityType || 'GENERAL' }}</span>
-        </div>
-        <div v-if="autocompleteResults.length === 0 && autocompleteQuery" class="autocomplete-empty">
-          No matching pages
+      <div v-if="showAutocomplete" data-testid="autocomplete-overlay" class="autocomplete-overlay">
+        <div data-testid="autocomplete-backdrop" class="autocomplete-backdrop" @click="closeAutocomplete" />
+        <div ref="picklistRef" data-testid="wiki-autocomplete-picklist" class="autocomplete-picklist">
+          <input
+            v-if="insertMode"
+            v-model="autocompleteQuery"
+            data-testid="autocomplete-search-input"
+            type="text"
+            placeholder="Search wiki pages..."
+            class="autocomplete-search-input"
+            autofocus
+          />
+          <div
+            v-for="result in autocompleteResults"
+            :key="result.node.id"
+            data-testid="autocomplete-item"
+            class="autocomplete-item"
+            @mousedown.prevent="selectAutocompleteItem(result.node.title)"
+          >
+            <span class="autocomplete-title">{{ result.node.title }}</span>
+            <span class="autocomplete-type">{{ result.node.entityType || 'GENERAL' }}</span>
+          </div>
+          <div v-if="autocompleteResults.length === 0 && autocompleteQuery" class="autocomplete-empty">
+            No matching pages
+          </div>
         </div>
       </div>
     </div>
@@ -242,10 +240,7 @@ function injectWikilink(title: string) {
     const after = content.value.slice(match.index! + match[0].length)
     content.value = before + `[[${title}]]` + after
   }
-  showAutocomplete.value = false
-  insertMode.value = false
-  autocompleteQuery.value = ''
-  autocompleteResults.value = []
+  closeAutocomplete()
 }
 
 // Debounced search
@@ -269,9 +264,7 @@ watch(content, (val) => {
     // Always search — empty query returns top nodes instead of nothing
     debouncedAutocomplete(query || '')
   } else {
-    showAutocomplete.value = false
-    autocompleteQuery.value = ''
-    autocompleteResults.value = []
+    closeAutocomplete()
   }
 }, { immediate: true })
 
@@ -281,8 +274,16 @@ watch(autocompleteQuery, (val) => {
     debouncedAutocomplete(val || '')
   }
 })
-onClickOutside(picklistRef, () => {
+// Close the autocomplete modal
+function closeAutocomplete() {
   showAutocomplete.value = false
+  insertMode.value = false
+  autocompleteQuery.value = ''
+  autocompleteResults.value = []
+}
+
+onClickOutside(picklistRef, () => {
+  closeAutocomplete()
 })
 
 // Register Ctrl+Shift+K shortcut inside the editor to open Command Palette
@@ -302,10 +303,7 @@ onMounted(() => {
 })
 function onEditorKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape' && showAutocomplete.value) {
-    showAutocomplete.value = false
-    insertMode.value = false
-    autocompleteQuery.value = ''
-    autocompleteResults.value = []
+    closeAutocomplete()
   }
 }
 
@@ -313,9 +311,7 @@ function onEditorKeydown(e: KeyboardEvent) {
 function toggleInsertLink() {
   if (showAutocomplete.value && insertMode.value) {
     // Already showing in insert mode — close it
-    showAutocomplete.value = false
-    insertMode.value = false
-    autocompleteResults.value = []
+    closeAutocomplete()
     return
   }
   insertMode.value = true
@@ -523,18 +519,31 @@ function handleSave() {
 .editor-wrapper {
   position: relative;
 }
-.autocomplete-picklist {
+.autocomplete-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.autocomplete-backdrop {
   position: absolute;
-  bottom: 8px;
-  left: 0;
-  right: 0;
-  max-height: 200px;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 0;
+}
+.autocomplete-picklist {
+  position: relative;
+  z-index: 1;
+  width: 500px;
+  max-width: 90vw;
+  max-height: 50vh;
   overflow-y: auto;
   background: #1a1a2e;
   border: 1px solid #e94560;
-  border-radius: 6px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-  z-index: 1000;
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
 }
 .autocomplete-search-input {
   width: 100%;

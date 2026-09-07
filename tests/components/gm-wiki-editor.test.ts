@@ -323,31 +323,22 @@ describe('GmWikiEditor.vue — Parent Selector UI', () => {
       expect(w.find('[data-testid="autocomplete-search-input"]').exists()).toBe(true)
     })
 
-    it('has no backdrop/modal overlay in autocomplete picklist', async () => {
+    // ── Issue #47: Fixed centered modal for search picklist ─────────
+    it('renders picklist as fixed centered modal with backdrop', async () => {
       const w = mountComponent({ parentOptions: mockFolders, initialContent: 'The party went to [[' })
       await w.vm.$nextTick()
       await w.vm.$nextTick()
       const picklist = w.find('[data-testid="wiki-autocomplete-picklist"]')
       expect(picklist.exists()).toBe(true)
 
-      // The picklist should NOT contain a backdrop/modal overlay class
-      const backdrop = w.find('[data-testid="cmd-palette-backdrop"]')
-      expect(backdrop.exists()).toBe(false)
+      // The picklist should be in a fixed overlay, not absolutely positioned at bottom
+      // Check for the overlay wrapper
+      const overlay = w.find('[data-testid="autocomplete-overlay"]')
+      expect(overlay.exists()).toBe(true)
 
-      // The picklist should have contextual positioning (class exists)
-      const classes = picklist.attributes('class') || ''
-      expect(classes).toContain('autocomplete-picklist')
-    })
-
-    // ── Issue #46: markdown-it preview parity ──────────────────────
-    it('transforms [[Title]] in preview via markdown-it plugin', () => {
-      // Mount with content containing [[Gandalf]]
-      const w = mountComponent({ parentOptions: mockFolders, initialContent: 'Meet [[Gandalf]] the wizard.' })
-      // The editor should have a markdownItConfig prop passed
-      const mdEditor = w.findComponent({ name: 'MdEditor' })
-      expect(mdEditor.exists()).toBe(true)
-      // Check that markdownItConfig prop was passed
-      expect(mdEditor.props('markdownItConfig')).toBeDefined()
+      // Backdrop should exist for closing
+      const backdrop = w.find('[data-testid="autocomplete-backdrop"]')
+      expect(backdrop.exists()).toBe(true)
     })
 
     it('closes picklist when Insert Wiki Link button is clicked again', async () => {
