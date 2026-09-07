@@ -44,6 +44,11 @@ export default defineNuxtConfig({
         src: './src/presentation/markdown/remark-wikilinks',
       },
     },
+    rehypePlugins: {
+      'rehype-mermaid': {
+        src: './src/presentation/markdown/rehype-mermaid',
+      },
+    },
   },
 
   vue: {
