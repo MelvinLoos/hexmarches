@@ -79,4 +79,8 @@ export class WikiService {
     const sanitizedQuery = sanitizeMarkdown(query)
     return this.repo.search(sanitizedQuery, limit)
   }
+
+  async getInboundReferences(title: string): Promise<WikiNode[]> {
+    return this.repo.findInboundReferences(title)
+  }
 }

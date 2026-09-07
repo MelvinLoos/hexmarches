@@ -29,8 +29,9 @@ beforeEach(async () => {
     { title: 'Dark Forest', content: 'A spooky forest filled with danger.', path: 'campaign.locations.forest', entity_type: 'LOCATION', cover_image_url: 'https://cdn.example.com/forest.jpg' },
     { title: 'Spooky Cave', content: 'A spooky cave deep underground.', path: 'campaign.locations.forest.cave', entity_type: 'LOCATION' },
     { title: 'Factions', content: 'All factions.', path: 'campaign.factions', entity_type: 'GENERAL' },
-    { title: 'NPCs', content: 'All NPCs.', path: 'campaign.npcs', entity_type: 'GENERAL' },
-    { title: 'Gandalf', content: 'A wise wizard.', path: 'campaign.npcs.gandalf', entity_type: 'NPC', cover_image_url: 'https://cdn.example.com/gandalf.jpg' },
+    { title: 'NPCs', content: 'All NPCs. See also [[Dark Forest]] for location context.', path: 'campaign.npcs', entity_type: 'GENERAL' },
+    { title: 'Gandalf', content: 'A wise wizard who often visits [[Dark Forest]].', path: 'campaign.npcs.gandalf', entity_type: 'NPC', cover_image_url: 'https://cdn.example.com/gandalf.jpg' },
+    { title: 'Session 4 Notes', content: 'Party explored [[Dark Forest]] and found [[Spooky Cave]]. Talked to [[Gandalf]] about the [[The Harpers]].', path: 'campaign.sessions.session4', entity_type: 'GENERAL' },
   ]).select()
   const nodes = data as any[]
   forestId = nodes.find((n: any) => n.path === 'campaign.locations.forest')!.id
@@ -152,6 +153,30 @@ describe('Issue #11: Infrastructure — Supabase Wiki Adapter & FTS', () => {
     it('should return empty array for no matches', async () => {
       const results = await repo.search('nonexistent12345xyz')
       expect(results).toHaveLength(0)
+    })
+  })
+
+  // ── Issue #40: Dynamic Backlinks ─────────────────────────────────
+  describe('findInboundReferences()', () => {
+    it('should find nodes that reference a given title via [[wikilinks]]', async () => {
+      const refs = await repo.findInboundReferences('Dark Forest')
+      expect(refs.length).toBeGreaterThanOrEqual(2)
+      const titles = refs.map(r => r.title)
+      // NPCs, Gandalf, and Session 4 Notes all reference [[Dark Forest]]
+      expect(titles).toContain('NPCs')
+      expect(titles).toContain('Gandalf')
+      expect(titles).toContain('Session 4 Notes')
+    })
+
+    it('should find nodes referencing Spooky Cave', async () => {
+      const refs = await repo.findInboundReferences('Spooky Cave')
+      expect(refs.length).toBeGreaterThanOrEqual(1)
+      expect(refs.map(r => r.title)).toContain('Session 4 Notes')
+    })
+
+    it('should return empty array for title with no references', async () => {
+      const refs = await repo.findInboundReferences('Nonexistent Page')
+      expect(refs).toHaveLength(0)
     })
   })
 })

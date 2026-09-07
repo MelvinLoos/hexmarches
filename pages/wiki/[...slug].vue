@@ -34,6 +34,7 @@
             </div>
           </div>
           <WikiRenderer :content="node.content" />
+          <WikiBacklinks :title="node.title" />
         </article>
       </div>
     </div>

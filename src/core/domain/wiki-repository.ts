@@ -31,4 +31,7 @@ export interface WikiRepository {
 
   /** Full-text search across wiki node content. */
   search(query: string, limit?: number): Promise<WikiNodeSearchResult[]>
+
+  /** Find nodes that reference a given title via [[wikilinks]] in their content. */
+  findInboundReferences(title: string): Promise<WikiNode[]>
 }

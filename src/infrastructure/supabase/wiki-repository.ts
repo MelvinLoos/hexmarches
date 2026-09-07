@@ -144,4 +144,16 @@ export class SupabaseWikiRepository implements WikiRepository {
       headline: row.headline ?? '',
     }))
   }
+
+  async findInboundReferences(title: string): Promise<WikiNode[]> {
+    // Match [[Title]] wiki-link pattern via PostgreSQL ILIKE
+    const pattern = `%[[${title}]]%`
+    const { data, error } = await this.adapter
+      .from(this.table)
+      .select()
+      .ilike('content', pattern)
+
+    if (error) throw new Error(`Failed to find inbound references: ${error.message}`)
+    return (data as SupabaseWikiRow[]).map(toDomain)
+  }
 }
