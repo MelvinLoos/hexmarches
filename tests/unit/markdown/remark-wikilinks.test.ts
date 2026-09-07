@@ -89,6 +89,33 @@ describe('Issue #30: Remark Plugin for Wiki-Links', () => {
     expect(htmlNodes).toHaveLength(0)
   })
 
+  it('should preserve trailing text after wiki-link', async () => {
+    const input = '[[Gandalf]] is a wizard.'
+    const processor = unified().use(remarkParse).use(remarkWikiLinks)
+    const parsed = processor.parse(input)
+    const ast = (await processor.run(parsed)) as Root
+
+    const { visit } = await import('unist-util-visit')
+    const textNodes: string[] = []
+    visit(ast, 'text', (node: unknown) => {
+      const n = node as { value: string }
+      textNodes.push(n.value)
+    })
+    const htmlNodes: string[] = []
+    visit(ast, 'html', (node: unknown) => {
+      const n = node as { value: string }
+      htmlNodes.push(n.value)
+    })
+
+    // Should have exactly 1 html node for the wiki-link
+    expect(htmlNodes).toHaveLength(1)
+    expect(htmlNodes[0]).toContain('wiki-link')
+    expect(htmlNodes[0]).toContain('Gandalf')
+
+    // Trailing text " is a wizard." must be a separate text node
+    expect(textNodes.join('')).toContain(' is a wizard.')
+  })
+
   it('should map node titles correctly via slugifyTitle', () => {
     // Verify the slugification used by the plugin
     expect(slugifyTitle('The Harpers')).toBe('the_harpers')

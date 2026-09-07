@@ -73,6 +73,10 @@ test('[[wikilink]] renders as <a> href with resolved ltree path', async ({ page 
   // AC4: The link text should be the target title
   await expect(link).toHaveText(testLinkTitle)
 
-  // AC5: No console errors
+  // AC5: Trailing text after the wiki-link must be visible in DOM
+  const articleText = await page.locator('.wiki-article').innerText()
+  expect(articleText).toContain('in the campaign.')
+
+  // AC6: No console errors
   expect(consoleErrors).toHaveLength(0)
 })
