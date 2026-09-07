@@ -48,6 +48,7 @@ function mountLayout() {
 }
 
 import CommandPalette from '~/components/layout/CommandPalette.client.vue'
+import { useCommandPalette } from '~/composables/useCommandPalette'
 
 function mountPalette() {
   mockSearchNodes.mockReset()
@@ -55,7 +56,45 @@ function mountPalette() {
 }
 
 describe('Issue #39: Command Palette (Cmd+K)', () => {
-  beforeEach(() => { fakeMagicKeysCurrent.value = new Set() })
+  beforeEach(() => {
+    fakeMagicKeysCurrent.value = new Set()
+    // Reset composable state
+    const cp = useCommandPalette()
+    cp.close()
+  })
+
+  describe('Shared composable (useCommandPalette)', () => {
+    it('open() makes the modal visible', async () => {
+      const wrapper = mountPalette()
+      const cp = useCommandPalette()
+      expect(wrapper.find('[data-testid="cmd-palette-modal"]').exists()).toBe(false)
+      cp.open()
+      await nextTick()
+      expect(wrapper.find('[data-testid="cmd-palette-modal"]').exists()).toBe(true)
+    })
+
+    it('close() hides the modal', async () => {
+      const wrapper = mountPalette()
+      const cp = useCommandPalette()
+      cp.open()
+      await nextTick()
+      expect(wrapper.find('[data-testid="cmd-palette-modal"]').exists()).toBe(true)
+      cp.close()
+      await nextTick()
+      expect(wrapper.find('[data-testid="cmd-palette-modal"]').exists()).toBe(false)
+    })
+
+    it('toggle() flips visibility', async () => {
+      const wrapper = mountPalette()
+      const cp = useCommandPalette()
+      cp.toggle()
+      await nextTick()
+      expect(wrapper.find('[data-testid="cmd-palette-modal"]').exists()).toBe(true)
+      cp.toggle()
+      await nextTick()
+      expect(wrapper.find('[data-testid="cmd-palette-modal"]').exists()).toBe(false)
+    })
+  })
 
   describe('Visibility (useMagicKeys)', () => {
     it('renders the command palette container initially', () => {

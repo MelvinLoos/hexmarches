@@ -2,7 +2,7 @@
   <div data-testid="cmd-palette-container" class="cmd-palette-container">
     <-- Command Palette Modal: shown when Meta+K or Ctrl+Shift+K is pressed or trigger button clicked -->
     <div v-if="visible" data-testid="cmd-palette-modal" class="cmd-palette-modal">
-      <div data-testid="cmd-palette-backdrop" class="cmd-palette-backdrop" @click="close" />
+      <div data-testid="cmd-palette-backdrop" class="cmd-palette-backdrop" @click="closePalette" />
       <div ref="modalRef" class="cmd-palette-content">
         <input
           ref="inputRef"
@@ -27,7 +27,7 @@
               <NuxtLink
                 :to="`/wiki/${result.node.path.replace(/\./g, '/')}`"
                 class="cmd-palette-result-link"
-                @click="close"
+                @click="closePalette"
               >
                 <span class="result-title">{{ result.node.title }}</span>
                 <span class="result-path">{{ result.node.path }}</span>
@@ -44,15 +44,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed, onMounted } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { useMagicKeys, onClickOutside, useDebounceFn } from '@vueuse/core'
 import { useWikiService } from '~/composables/useWikiService'
+import { useCommandPalette } from '~/composables/useCommandPalette'
 import type { WikiNodeSearchResult } from '~/src/core/domain/wiki-repository'
 
 const { current } = useMagicKeys()
 const wikiService = useWikiService()
-
-const visible = ref(false)
+const { isOpen: visible, open, close } = useCommandPalette()
 const query = ref('')
 const results = ref<WikiNodeSearchResult[]>([])
 const modalRef = ref<HTMLElement | null>(null)
@@ -78,20 +78,20 @@ watch(current, (keys) => {
     (keys.has('Meta') && keys.has('k')) ||
     (keys.has('Control') && keys.has('Shift') && keys.has('K'))
   ) {
-    visible.value = true
+    open()
     query.value = ''
     results.value = []
     // Focus input on next tick after modal appears
     setTimeout(() => inputRef.value?.focus(), 50)
   }
   if (keys.has('Escape')) {
-    close()
+    closePalette()
   }
 })
 
-// Close handler
-function close() {
-  visible.value = false
+// Close handler — uses shared composable close
+function closePalette() {
+  close()
   query.value = ''
   results.value = []
 }
@@ -116,7 +116,7 @@ watch(query, (val) => {
 
 // Close on click outside
 onClickOutside(modalRef, () => {
-  visible.value = false
+  closePalette()
 })
 </script>
 

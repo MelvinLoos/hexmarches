@@ -103,6 +103,7 @@
         </button>
       </div>
       <MdEditor
+        ref="editorRef"
         v-model="content"
         theme="dark"
         language="en-US"
@@ -117,6 +118,15 @@
         data-testid="wiki-autocomplete-picklist"
         class="autocomplete-picklist"
       >
+        <input
+          v-if="insertMode"
+          v-model="autocompleteQuery"
+          data-testid="autocomplete-search-input"
+          type="text"
+          placeholder="Search wiki pages..."
+          class="autocomplete-search-input"
+          autofocus
+        />
         <div
           v-for="result in autocompleteResults"
           :key="result.node.id"
@@ -138,11 +148,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { MdEditor } from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'
 import { useDebounceFn, onClickOutside } from '@vueuse/core'
 import { useWikiService } from '~/composables/useWikiService'
+import { useCommandPalette } from '~/composables/useCommandPalette'
 import type { WikiNode } from '~/src/core/domain/wiki-node'
 import { generateChildPath, WikiNodeType } from '~/src/core/domain/wiki-node'
 import type { WikiNodeSearchResult } from '~/src/core/domain/wiki-repository'
@@ -183,6 +194,8 @@ const selectedParent = ref(extractParentPath(props.initialPath ?? ''))
 
 // ── Wiki-Link Autocomplete State ────────────────────────────────────
 const wikiService = useWikiService()
+const commandPalette = useCommandPalette()
+const editorRef = ref<InstanceType<typeof MdEditor> | null>(null)
 const showAutocomplete = ref(false)
 const autocompleteQuery = ref('')
 const autocompleteResults = ref<WikiNodeSearchResult[]>([])
@@ -199,12 +212,21 @@ function extractAutocompleteQuery(text: string): string | null {
 }
 
 // Replace the open [[query with [[Title]] in the content,
-// or append [[Title]] at end when in manual insert-mode.
+// or insert at cursor when in manual insert-mode.
 function injectWikilink(title: string) {
   if (insertMode.value) {
-    // Manual insertion — append [[Title]] at end of content
-    const sep = content.value && !content.value.endsWith('\n') ? ' ' : ''
-    content.value = content.value + sep + `[[${title}]]`
+    // Manual insertion — use editor's insert() at cursor position
+    const ed = editorRef.value
+    if (ed && typeof (ed as any).insert === 'function') {
+      (ed as any).insert((_selectedText: string) => ({
+        targetValue: `[[${title}]]`,
+        select: false,
+      }))
+    } else {
+      // Fallback: append to end
+      const sep = content.value && !content.value.endsWith('\n') ? ' ' : ''
+      content.value = content.value + sep + `[[${title}]]`
+    }
   } else {
     // [[-triggered — replace the open [[query with [[Title]]
     const match = content.value.match(wikilinkOpenRe)
@@ -221,12 +243,10 @@ function injectWikilink(title: string) {
 
 // Debounced search
 const debouncedAutocomplete = useDebounceFn(async (query: string) => {
-  if (!query.trim()) {
-    autocompleteResults.value = []
-    return
-  }
   try {
-    autocompleteResults.value = await wikiService.searchNodes(query, 8)
+    // Empty query returns the most recent/available nodes (top 20)
+    const searchQuery = query.trim() || ' '
+    autocompleteResults.value = await wikiService.searchNodes(searchQuery, 8)
   } catch {
     autocompleteResults.value = []
   }
@@ -239,7 +259,8 @@ watch(content, (val) => {
   if (query !== null) {
     showAutocomplete.value = true
     autocompleteQuery.value = query
-    debouncedAutocomplete(query)
+    // Always search — empty query returns top nodes instead of nothing
+    debouncedAutocomplete(query || '')
   } else {
     showAutocomplete.value = false
     autocompleteQuery.value = ''
@@ -247,12 +268,31 @@ watch(content, (val) => {
   }
 }, { immediate: true })
 
-// Close picklist on click outside
+// Watch autocompleteQuery changes in insert mode to trigger searches
+watch(autocompleteQuery, (val) => {
+  if (insertMode.value) {
+    debouncedAutocomplete(val || '')
+  }
+})
 onClickOutside(picklistRef, () => {
   showAutocomplete.value = false
 })
 
-// Handle Escape key to close picklist
+// Register Ctrl+Shift+K shortcut inside the editor to open Command Palette
+onMounted(() => {
+  const ed = editorRef.value
+  if (ed && typeof (ed as any).domEventHandlers === 'function') {
+    (ed as any).domEventHandlers({
+      keydown(event: KeyboardEvent) {
+        if (event.ctrlKey && event.shiftKey && event.key === 'K') {
+          event.preventDefault()
+          commandPalette.open()
+          return true
+        }
+      },
+    })
+  }
+})
 function onEditorKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape' && showAutocomplete.value) {
     showAutocomplete.value = false
@@ -487,7 +527,20 @@ function handleSave() {
   border: 1px solid #e94560;
   border-radius: 6px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-  z-index: 100;
+  z-index: 1000;
+}
+.autocomplete-search-input {
+  width: 100%;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid #0f3460;
+  color: #e0e0e0;
+  font-size: 0.85rem;
+  outline: none;
+}
+.autocomplete-search-input::placeholder {
+  color: #555;
 }
 .autocomplete-item {
   display: flex;

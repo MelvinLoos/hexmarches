@@ -9,7 +9,10 @@ vi.mock('md-editor-v3', () => ({
     name: 'MdEditor',
     props: { modelValue: String, theme: String, language: String, previewTheme: String },
     emits: ['update:modelValue'],
-    setup(props, { emit }) {
+    setup(props, { emit, expose }) {
+      const insert = vi.fn()
+      const domEventHandlers = vi.fn()
+      expose({ insert, focus: vi.fn(), domEventHandlers, getEditorView: vi.fn() })
       return () => h('div', { 'data-testid': 'md-editor' }, [
         h('textarea', {
           value: props.modelValue,
@@ -302,6 +305,16 @@ describe('GmWikiEditor.vue — Parent Selector UI', () => {
       await w.vm.$nextTick()
       await w.vm.$nextTick()
       expect(w.find('[data-testid="wiki-autocomplete-picklist"]').exists()).toBe(true)
+    })
+
+    it('shows search input inside picklist when in insert mode', async () => {
+      const w = mountComponent({ parentOptions: mockFolders, initialContent: 'Some content' })
+      const btn = w.find('[data-testid="wiki-insert-link-btn"]')
+      await btn.trigger('click')
+      await w.vm.$nextTick()
+      await w.vm.$nextTick()
+      // In insert mode, the picklist should contain a search input
+      expect(w.find('[data-testid="autocomplete-search-input"]').exists()).toBe(true)
     })
 
     it('closes picklist when Insert Wiki Link button is clicked again', async () => {
