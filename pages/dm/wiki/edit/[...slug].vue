@@ -92,7 +92,6 @@ async function handleSave(payload: { title: string; content: string; path: strin
         entityType: payload.entityType,
       })
       showSuccess(`"${payload.title}" updated successfully!`)
-      // Redirect to the wiki viewer page after update
       const wikiUrl = `/wiki/${payload.path.replace(/\./g, '/')}`
       router.push(wikiUrl)
     }
@@ -104,19 +103,31 @@ async function handleSave(payload: { title: string; content: string; path: strin
 
 async function handleUploadImage(file: File, callback: (url: string) => void) {
   try {
-    const { data } = await useSupabaseClient().storage
+    const supabase = useSupabaseClient()
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+    const filePath = `wiki-covers/${Date.now()}_${safeName}`
+
+    const { data, error } = await supabase.storage
       .from('wiki-assets')
-      .upload(`wiki-covers/${Date.now()}_${file.name}`, file, {
+      .upload(filePath, file, {
         cacheControl: '3600',
         upsert: true,
       })
+
+    if (error) {
+      console.error('Upload failed:', error)
+      showError(`Upload failed: ${error.message}`)
+      return
+    }
+
     if (data) {
-      const publicUrl = useSupabaseClient().storage
+      const publicUrl = supabase.storage
         .from('wiki-assets')
         .getPublicUrl(data.path).data.publicUrl
       callback(publicUrl)
     }
   } catch (err) {
+    console.error('Upload failed:', err)
     showError('Failed to upload image.')
   }
 }
