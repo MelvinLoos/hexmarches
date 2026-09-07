@@ -37,6 +37,9 @@ export default defineNuxtConfig({
       map: {},
     },
     remarkPlugins: {
+      'remark-gfm': {
+        src: 'remark-gfm',
+      },
       'remark-wikilinks': {
         src: './src/presentation/markdown/remark-wikilinks',
       },
