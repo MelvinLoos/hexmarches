@@ -27,6 +27,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Start local Supabase stack
+        run: npm exec -- supabase start
+
       - name: Prepare Nuxt (generate .nuxt/tsconfig.json)
         run: npx nuxt prepare
 
