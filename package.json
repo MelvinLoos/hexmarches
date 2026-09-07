@@ -30,6 +30,7 @@
     "@supabase/server": "^1.5.3",
     "@supabase/supabase-js": "^2.49.0",
     "@vite-pwa/nuxt": "^0.10.0",
+    "@vueuse/core": "^14.4.0",
     "h3": "^1.15.11",
     "honeycomb-grid": "^4.1.0",
     "idb": "^8.0.0",

@@ -16,6 +16,8 @@
       <slot />
     </main>
 
+    <CommandPalette />
+
     <footer class="app-footer">
       <span>HexMarches — Virtual Tabletop &amp; Campaign Manager</span>
     </footer>
