@@ -171,6 +171,25 @@ describe('WikiService', () => {
     })
   })
 
+  describe('deleteNode()', () => {
+    it('should delete a node and return true', async () => {
+      const created = await service.createNode({
+        title: 'To Delete', content: '# Bye', path: 'test.delete',
+      })
+      const result = await service.deleteNode(created.id)
+      expect(result).toBe(true)
+
+      // Verify it's gone
+      const found = await service.findById(created.id)
+      expect(found).toBeNull()
+    })
+
+    it('should return false for non-existent node', async () => {
+      const result = await service.deleteNode('nonexistent-id')
+      expect(result).toBe(false)
+    })
+  })
+
   describe('getNodeTree()', () => {
     it('should fetch descendants via repository', async () => {
       await service.createNode({ title: 'Root', content: '# Root', path: 'root' })
@@ -186,7 +205,6 @@ describe('WikiService', () => {
     })
   })
 
-  // ─── Anti-regression: findByPath ─────────────────────────────────
   describe('findByPath()', () => {
     it('should return a node by its exact ltree path', async () => {
       const created = await service.createNode({
@@ -215,7 +233,6 @@ describe('WikiService', () => {
     })
   })
 
-  // ─── Anti-regression: findById ───────────────────────────────────
   describe('findById()', () => {
     it('should return a node by its ID', async () => {
       const created = await service.createNode({

@@ -14,7 +14,25 @@
           </NuxtLink>
         </div>
         <article v-else-if="node" class="wiki-article">
-          <h1 class="wiki-node-title">{{ node.title }}</h1>
+          <div class="wiki-title-row">
+            <h1 class="wiki-node-title">{{ node.title }}</h1>
+            <div v-if="isGm" class="wiki-actions">
+              <NuxtLink
+                :to="`/dm/wiki/edit/${ltreePath.replace(/\./g, '/')}`"
+                class="action-btn edit-btn"
+                data-testid="wiki-edit-button"
+              >
+                Edit
+              </NuxtLink>
+              <button
+                class="action-btn delete-btn"
+                data-testid="wiki-delete-button"
+                @click="handleDelete"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
           <WikiRenderer :content="node.content" />
         </article>
       </div>
@@ -24,12 +42,17 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useWikiService } from '~/composables/useWikiService'
+import { useGmStatus } from '~/composables/useGmStatus'
+import { useToast } from '~/composables/useToast'
 import type { WikiNode } from '~/src/core/domain/wiki-node'
 
 const route = useRoute()
+const router = useRouter()
 const wikiService = useWikiService()
+const { isGm } = useGmStatus()
+const { success: showSuccess, error: showError } = useToast()
 
 const ltreePath = computed(() => {
   const slug = route.params.slug as string | string[]
@@ -58,6 +81,20 @@ async function fetchNode() {
   }
 }
 
+async function handleDelete() {
+  if (!node.value) return
+  if (!confirm(`Delete "${node.value.title}"? This cannot be undone.`)) return
+
+  try {
+    await wikiService.deleteNode(node.value.id)
+    showSuccess(`"${node.value.title}" deleted.`)
+    router.push('/wiki')
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    showError(`Delete failed: ${message}`)
+  }
+}
+
 onMounted(fetchNode)
 
 watch(() => route.params.slug, () => {
@@ -78,5 +115,12 @@ const notFound = computed(() => !loading.value && !node.value)
 .create-link { display: inline-block; margin-top: 16px; padding: 8px 16px; background: #e94560; color: #fff; text-decoration: none; border-radius: 6px; }
 .create-link:hover { background: #f75973; }
 .wiki-article { max-width: 800px; }
-.wiki-node-title { color: #e94560; margin-bottom: 24px; font-size: 1.75rem; border-bottom: 1px solid #0f3460; padding-bottom: 12px; }
+.wiki-title-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; border-bottom: 1px solid #0f3460; padding-bottom: 12px; }
+.wiki-node-title { color: #e94560; font-size: 1.75rem; margin: 0; border: none; padding: 0; }
+.wiki-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.action-btn { padding: 6px 14px; font-size: 0.8rem; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; display: inline-block; }
+.edit-btn { background: #0f3460; color: #e0e0e0; }
+.edit-btn:hover { background: #1a5276; }
+.delete-btn { background: #c62828; color: #fff; }
+.delete-btn:hover { background: #e53935; }
 </style>
