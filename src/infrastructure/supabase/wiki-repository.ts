@@ -91,10 +91,9 @@ export class SupabaseWikiRepository implements WikiRepository {
   }
 
   async getDescendants(path: string): Promise<WikiNode[]> {
-    const { data, error } = await this.adapter
-      .from(this.table)
-      .select()
-      .like('path', `${path}%`)
+    const { data, error } = await this.adapter.client.rpc('get_wiki_descendants', {
+      parent_path: path,
+    })
 
     if (error) throw new Error(`Failed to fetch descendants: ${error.message}`)
     return (data as SupabaseWikiRow[]).map(toDomain)

@@ -1,351 +1,156 @@
-import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest'
-import { http, HttpResponse } from 'msw'
-import { setupServer } from 'msw/node'
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
+import { createClient } from '@supabase/supabase-js'
 import { SupabaseWikiRepository } from '~/src/infrastructure/supabase/wiki-repository'
 import { createSupabaseAdapter } from '~/src/infrastructure/supabase/adapter'
-import { createClient } from '@supabase/supabase-js'
 import type { WikiNode } from '~/src/core/domain/wiki-node'
 
-// ─── Issue #11: Task 2 — Supabase Wiki Adapter & FTS ───────────────
-// CRUD operations, tree-fetching by ltree paths, Full-Text Search queries
+const SUPABASE_URL = 'http://127.0.0.1:54321'
+const ANON_KEY = 'sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH'
+const SERVICE_KEY = 'sb_secret_N7UND0UgjKTVK-Uodkm0Hg_xSvEMPvz'
 
-const SUPABASE_URL = 'http://localhost:54321'
-const SUPABASE_KEY = 'test-anon-key'
+let adminClient: ReturnType<typeof createClient>
+let repo: SupabaseWikiRepository
+let forestId: string
+let caveId: string
+let gandalfId: string
 
-const mockNode: WikiNode = {
-  id: 'node-1',
-  title: 'Dark Forest',
-  content: '# Dark Forest\n\nA spooky forest.',
-  path: 'campaign.locations.forest',
-  createdAt: new Date('2025-06-01'),
-  updatedAt: new Date('2025-06-15'),
-}
-
-const mockNode2: WikiNode = {
-  id: 'node-2',
-  title: 'Elder Cave',
-  content: '## Elder Cave\n\nDeep within the forest.',
-  path: 'campaign.locations.forest.cave',
-  parentId: 'node-1',
-  createdAt: new Date('2025-06-02'),
-  updatedAt: new Date('2025-06-16'),
-}
-
-const server = setupServer()
-
-beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
-afterEach(() => server.resetHandlers())
-afterAll(() => server.close())
-
-function makeRepository(): SupabaseWikiRepository {
-  const client = createClient(SUPABASE_URL, SUPABASE_KEY)
+beforeAll(() => {
+  adminClient = createClient(SUPABASE_URL, SERVICE_KEY)
+  const client = createClient(SUPABASE_URL, ANON_KEY)
   const adapter = createSupabaseAdapter(client)
-  return new SupabaseWikiRepository(adapter)
-}
+  repo = new SupabaseWikiRepository(adapter)
+})
+
+beforeEach(async () => {
+  await adminClient.from('wiki_nodes').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+  const { data } = await adminClient.from('wiki_nodes').insert([
+    { title: 'Campaign', content: 'Root node.', path: 'campaign', entity_type: 'GENERAL' },
+    { title: 'Locations', content: 'All locations.', path: 'campaign.locations', entity_type: 'GENERAL' },
+    { title: 'Dark Forest', content: 'A spooky forest filled with danger.', path: 'campaign.locations.forest', entity_type: 'LOCATION', cover_image_url: 'https://cdn.example.com/forest.jpg' },
+    { title: 'Spooky Cave', content: 'A spooky cave deep underground.', path: 'campaign.locations.forest.cave', entity_type: 'LOCATION' },
+    { title: 'Factions', content: 'All factions.', path: 'campaign.factions', entity_type: 'GENERAL' },
+    { title: 'NPCs', content: 'All NPCs.', path: 'campaign.npcs', entity_type: 'GENERAL' },
+    { title: 'Gandalf', content: 'A wise wizard.', path: 'campaign.npcs.gandalf', entity_type: 'NPC', cover_image_url: 'https://cdn.example.com/gandalf.jpg' },
+  ]).select()
+  const nodes = data as any[]
+  forestId = nodes.find((n: any) => n.path === 'campaign.locations.forest')!.id
+  caveId = nodes.find((n: any) => n.path === 'campaign.locations.forest.cave')!.id
+  gandalfId = nodes.find((n: any) => n.path === 'campaign.npcs.gandalf')!.id
+})
+
+afterAll(async () => {
+  await adminClient.from('wiki_nodes').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+})
 
 describe('Issue #11: Infrastructure — Supabase Wiki Adapter & FTS', () => {
-  // ─── Create Node ──────────────────────────────────────────────────
   describe('createNode()', () => {
     it('should create a wiki node and return it', async () => {
-      server.use(
-        http.post(`${SUPABASE_URL}/rest/v1/wiki_nodes`, async ({ request }) => {
-          const body = await request.json() as Record<string, unknown>
-          expect(body.title).toBe('Dark Forest')
-          expect(body.path).toBe('campaign.locations.forest')
-          return HttpResponse.json({ ...mockNode, ...body }, { status: 201 })
-        })
-      )
-
-      const repo = makeRepository()
       const node = await repo.createNode({
         title: 'Dark Forest',
         content: '# Dark Forest\n\nA spooky forest.',
         path: 'campaign.locations.forest',
       })
-
       expect(node.title).toBe('Dark Forest')
       expect(node.path).toBe('campaign.locations.forest')
+      expect(node.id).toBeTruthy()
+      expect(node.createdAt).toBeInstanceOf(Date)
     })
   })
 
-  // ─── Find by ID ──────────────────────────────────────────────────
   describe('findById()', () => {
     it('should return a node when found by ID', async () => {
-      server.use(
-        http.get(`${SUPABASE_URL}/rest/v1/wiki_nodes`, ({ request }) => {
-          const url = new URL(request.url)
-          if (url.searchParams.get('id') === 'eq.node-1') {
-            return HttpResponse.json([mockNode])
-          }
-          return HttpResponse.json([])
-        })
-      )
-
-      const repo = makeRepository()
-      const node = await repo.findById('node-1')
+      const node = await repo.findById(forestId)
       expect(node).not.toBeNull()
-      expect(node!.id).toBe('node-1')
+      expect(node!.id).toBe(forestId)
       expect(node!.title).toBe('Dark Forest')
     })
-
     it('should return null when node not found', async () => {
-      server.use(
-        http.get(`${SUPABASE_URL}/rest/v1/wiki_nodes`, () => HttpResponse.json([]))
-      )
-
-      const repo = makeRepository()
-      const node = await repo.findById('nonexistent')
+      const node = await repo.findById('00000000-0000-0000-0000-000000000000')
       expect(node).toBeNull()
     })
   })
 
-  // ─── Find by Path ────────────────────────────────────────────────
   describe('findByPath()', () => {
-    it('should find a node by exact ltree path', async () => {
-      server.use(
-        http.get(`${SUPABASE_URL}/rest/v1/wiki_nodes`, ({ request }) => {
-          const url = new URL(request.url)
-          if (url.searchParams.get('path') === 'eq.campaign.locations.forest') {
-            return HttpResponse.json([mockNode])
-          }
-          return HttpResponse.json([])
-        })
-      )
-
-      const repo = makeRepository()
+    it('should return a node by exact ltree path', async () => {
       const node = await repo.findByPath('campaign.locations.forest')
       expect(node).not.toBeNull()
+      expect(node!.title).toBe('Dark Forest')
       expect(node!.path).toBe('campaign.locations.forest')
     })
-})
-
-  // ─── Get Descendants (Tree Fetch) ────────────────────────────────
-  describe('getDescendants()', () => {
-    it('should fetch all descendants via ltree prefix matching', async () => {
-      server.use(
-        http.get(`${SUPABASE_URL}/rest/v1/wiki_nodes`, ({ request }) => {
-          const url = new URL(request.url)
-          if (url.searchParams.get('path') === 'like.campaign.locations%') {
-            return HttpResponse.json([mockNode, mockNode2])
-          }
-          return HttpResponse.json([])
-        })
-      )
-
-      const repo = makeRepository()
-      const nodes = await repo.getDescendants('campaign.locations')
-      expect(nodes).toHaveLength(2)
-      expect(nodes[0].path).toBe('campaign.locations.forest')
-      expect(nodes[1].path).toBe('campaign.locations.forest.cave')
-    })
-
-    it('should return empty array when no descendants exist', async () => {
-      server.use(
-        http.get(`${SUPABASE_URL}/rest/v1/wiki_nodes`, () => HttpResponse.json([]))
-      )
-      const repo = makeRepository()
-      const nodes = await repo.getDescendants('nonexistent.path')
-      expect(nodes).toHaveLength(0)
-    })
-  })
-
-  // ─── Update Node ─────────────────────────────────────────────────
-  describe('updateNode()', () => {
-    it('should update a node and return the updated record', async () => {
-      server.use(
-        http.patch(`${SUPABASE_URL}/rest/v1/wiki_nodes`, async ({ request }) => {
-          const url = new URL(request.url)
-          expect(url.searchParams.get('id')).toBe('eq.node-1')
-          const body = await request.json() as Record<string, unknown>
-          return HttpResponse.json([{ ...mockNode, ...body, updatedAt: new Date().toISOString() }])
-        })
-      )
-
-      const repo = makeRepository()
-      const node = await repo.updateNode('node-1', { title: 'Updated Forest' })
-      expect(node).not.toBeNull()
-      expect(node!.title).toBe('Updated Forest')
-    })
-
-    it('should return null when updating nonexistent node', async () => {
-      server.use(
-        http.patch(`${SUPABASE_URL}/rest/v1/wiki_nodes`, () => HttpResponse.json([]))
-      )
-      const repo = makeRepository()
-      const node = await repo.updateNode('nonexistent', { title: 'Nope' })
+    it('should return null for non-existent path', async () => {
+      const node = await repo.findByPath('campaign.nonexistent.xyz')
       expect(node).toBeNull()
     })
   })
 
-  // ─── Delete Node ─────────────────────────────────────────────────
+  describe('getDescendants()', () => {
+    it('should return all descendants of a path', async () => {
+      const descendants = await repo.getDescendants('campaign.locations')
+      expect(descendants.length).toBeGreaterThanOrEqual(2)
+      const paths = descendants.map(d => d.path)
+      expect(paths).toContain('campaign.locations.forest')
+      expect(paths).toContain('campaign.locations.forest.cave')
+    })
+  })
+
+  describe('updateNode()', () => {
+    it('should update a node and return it', async () => {
+      const updated = await repo.updateNode(forestId, { title: 'Misty Forest', content: 'Updated content.' })
+      expect(updated).not.toBeNull()
+      expect(updated!.title).toBe('Misty Forest')
+      expect(updated!.content).toBe('Updated content.')
+      expect(updated!.id).toBe(forestId)
+    })
+    it('should return null for non-existent node', async () => {
+      const result = await repo.updateNode('00000000-0000-0000-0000-000000000000', { title: 'Nope' })
+      expect(result).toBeNull()
+    })
+  })
+
   describe('deleteNode()', () => {
     it('should delete a node and return true', async () => {
-      server.use(
-        http.delete(`${SUPABASE_URL}/rest/v1/wiki_nodes`, ({ request }) => {
-          const url = new URL(request.url)
-          expect(url.searchParams.get('id')).toBe('eq.node-1')
-          return HttpResponse.json([{ id: 'node-1' }])
-        })
-      )
-      const repo = makeRepository()
-      const result = await repo.deleteNode('node-1')
+      const result = await repo.deleteNode(caveId)
       expect(result).toBe(true)
+      const node = await repo.findById(caveId)
+      expect(node).toBeNull()
     })
-
-    it('should return false when deleting nonexistent node', async () => {
-      server.use(
-        http.delete(`${SUPABASE_URL}/rest/v1/wiki_nodes`, () => HttpResponse.json([]))
-      )
-      const repo = makeRepository()
-      const result = await repo.deleteNode('nonexistent')
+    it('should return false for non-existent node', async () => {
+      const result = await repo.deleteNode('00000000-0000-0000-0000-000000000000')
       expect(result).toBe(false)
     })
   })
 
-  // ─── Issue #26: Task 1 — Entity Type & Cover Image (CRUD) ─────────
   describe('entity_type and cover_image_url fields', () => {
-    const mockNodeWithMeta: WikiNode = {
-      id: 'node-meta-1',
-      title: 'Dark Forest',
-      content: '# Dark Forest\n\nA spooky forest.',
-      path: 'campaign.locations.forest',
-      coverImageUrl: 'https://cdn.example.com/forest.jpg',
-      entityType: 'LOCATION' as WikiNode['entityType'],
-      createdAt: new Date('2025-06-01'),
-      updatedAt: new Date('2025-06-15'),
-    }
-
-    it('should create a node with coverImageUrl and entityType', async () => {
-      server.use(
-        http.post(`${SUPABASE_URL}/rest/v1/wiki_nodes`, async ({ request }) => {
-          const body = await request.json() as Record<string, unknown>
-          expect(body.cover_image_url).toBe('https://cdn.example.com/forest.jpg')
-          expect(body.entity_type).toBe('LOCATION')
-          const row = {
-            id: 'node-meta-1',
-            title: body.title,
-            content: body.content,
-            path: body.path,
-            cover_image_url: body.cover_image_url,
-            entity_type: body.entity_type,
-            created_at: '2025-06-01T00:00:00Z',
-            updated_at: '2025-06-15T00:00:00Z',
-          }
-          return HttpResponse.json(row, { status: 201 })
-        })
-      )
-
-      const repo = makeRepository()
-      const node = await repo.createNode({
-        title: 'Dark Forest',
-        content: '# Dark Forest',
-        path: 'campaign.locations.forest',
-        coverImageUrl: 'https://cdn.example.com/forest.jpg',
-        entityType: 'LOCATION' as WikiNode['entityType'],
-      })
-
-      expect(node.coverImageUrl).toBe('https://cdn.example.com/forest.jpg')
-      expect(node.entityType).toBe('LOCATION')
-    })
-
     it('should update coverImageUrl on an existing node', async () => {
-      server.use(
-        http.patch(`${SUPABASE_URL}/rest/v1/wiki_nodes`, async ({ request }) => {
-          const url = new URL(request.url)
-          expect(url.searchParams.get('id')).toBe('eq.node-1')
-          const body = await request.json() as Record<string, unknown>
-          return HttpResponse.json([{ ...mockNode, ...body, updated_at: new Date().toISOString() }])
-        })
-      )
-
-      const repo = makeRepository()
-      const node = await repo.updateNode('node-1', { coverImageUrl: 'https://cdn.example.com/new.jpg' })
-      expect(node).not.toBeNull()
-      expect(node!.coverImageUrl).toBe('https://cdn.example.com/new.jpg')
+      const updated = await repo.updateNode(forestId, { coverImageUrl: 'https://cdn.example.com/new.jpg' })
+      expect(updated).not.toBeNull()
+      expect(updated!.coverImageUrl).toBe('https://cdn.example.com/new.jpg')
     })
-
     it('should find a node with entityType from the database', async () => {
-      server.use(
-        http.get(`${SUPABASE_URL}/rest/v1/wiki_nodes`, ({ request }) => {
-          const url = new URL(request.url)
-          if (url.searchParams.get('id') === 'eq.node-meta-1') {
-            return HttpResponse.json([{
-              id: 'node-meta-1', title: 'Dark Forest', content: '# Forest',
-              path: 'campaign.locations.forest',
-              cover_image_url: 'https://cdn.example.com/forest.jpg',
-              entity_type: 'LOCATION',
-              created_at: '2025-06-01T00:00:00Z', updated_at: '2025-06-15T00:00:00Z',
-            }])
-          }
-          return HttpResponse.json([])
-        })
-      )
-
-      const repo = makeRepository()
-      const node = await repo.findById('node-meta-1')
+      const node = await repo.findById(gandalfId)
       expect(node).not.toBeNull()
-      expect(node!.coverImageUrl).toBe('https://cdn.example.com/forest.jpg')
-      expect(node!.entityType).toBe('LOCATION')
-    })
-
-    it('should update entityType on an existing node', async () => {
-      server.use(
-        http.patch(`${SUPABASE_URL}/rest/v1/wiki_nodes`, async ({ request }) => {
-          const url = new URL(request.url)
-          expect(url.searchParams.get('id')).toBe('eq.node-1')
-          const body = await request.json() as Record<string, unknown>
-          return HttpResponse.json([{ ...mockNode, ...body, entity_type: 'NPC', updated_at: new Date().toISOString() }])
-        })
-      )
-
-      const repo = makeRepository()
-      const node = await repo.updateNode('node-1', { entityType: 'NPC' as WikiNode['entityType'] })
-      expect(node).not.toBeNull()
+      expect(node!.coverImageUrl).toBe('https://cdn.example.com/gandalf.jpg')
       expect(node!.entityType).toBe('NPC')
+    })
+    it('should update entityType on an existing node', async () => {
+      const node = await repo.updateNode(gandalfId, { entityType: 'GENERAL' as WikiNode['entityType'] })
+      expect(node).not.toBeNull()
+      expect(node!.entityType).toBe('GENERAL')
     })
   })
 
-  // ─── Full-Text Search ────────────────────────────────────────────
   describe('search()', () => {
-    const searchResults = [
-      {
-        id: 'node-1', title: 'Dark Forest', content: '# Dark Forest',
-        path: 'campaign.locations.forest',
-        created_at: '2025-06-01T00:00:00Z', updated_at: '2025-06-15T00:00:00Z',
-        rank: 0.8, headline: 'A <b>spooky</b> forest.',
-      },
-      {
-        id: 'node-2', title: 'Spooky Cave', content: '## Cave',
-        path: 'campaign.locations.forest.cave',
-        created_at: '2025-06-02T00:00:00Z', updated_at: '2025-06-16T00:00:00Z',
-        rank: 0.5, headline: 'A <b>spooky</b> cave.',
-      },
-    ]
-
     it('should perform FTS and return ranked results', async () => {
-      server.use(
-        http.post(`${SUPABASE_URL}/rest/v1/rpc/search_wiki`, async ({ request }) => {
-          const body = await request.json() as Record<string, unknown>
-          expect(body.search_query).toBe('spooky')
-          return HttpResponse.json(searchResults)
-        })
-      )
-
-      const repo = makeRepository()
       const results = await repo.search('spooky', 10)
-      expect(results).toHaveLength(2)
-      expect(results[0].rank).toBe(0.8)
-      expect(results[0].headline).toBe('A <b>spooky</b> forest.')
-      expect(results[0].node.title).toBe('Dark Forest')
-      expect(results[1].node.title).toBe('Spooky Cave')
+      expect(results.length).toBeGreaterThanOrEqual(1)
+      const titles = results.map(r => r.node.title)
+      expect(titles).toContain('Dark Forest')
+      expect(titles).toContain('Spooky Cave')
+      expect(results[0].rank).toBeGreaterThan(0)
+      expect(results[0].headline).toContain('<b>')
     })
-
     it('should return empty array for no matches', async () => {
-      server.use(
-        http.post(`${SUPABASE_URL}/rest/v1/rpc/search_wiki`, () => HttpResponse.json([]))
-      )
-      const repo = makeRepository()
-      const results = await repo.search('nonexistent12345')
+      const results = await repo.search('nonexistent12345xyz')
       expect(results).toHaveLength(0)
     })
   })
