@@ -317,6 +317,22 @@ describe('GmWikiEditor.vue — Parent Selector UI', () => {
       expect(w.find('[data-testid="autocomplete-search-input"]').exists()).toBe(true)
     })
 
+    it('has no backdrop/modal overlay in autocomplete picklist', async () => {
+      const w = mountComponent({ parentOptions: mockFolders, initialContent: 'The party went to [[' })
+      await w.vm.$nextTick()
+      await w.vm.$nextTick()
+      const picklist = w.find('[data-testid="wiki-autocomplete-picklist"]')
+      expect(picklist.exists()).toBe(true)
+
+      // The picklist should NOT contain a backdrop/modal overlay class
+      const backdrop = w.find('[data-testid="cmd-palette-backdrop"]')
+      expect(backdrop.exists()).toBe(false)
+
+      // The picklist should have contextual positioning (class exists)
+      const classes = picklist.attributes('class') || ''
+      expect(classes).toContain('autocomplete-picklist')
+    })
+
     it('closes picklist when Insert Wiki Link button is clicked again', async () => {
       const w = mountComponent({ parentOptions: mockFolders, initialContent: 'Some content' })
       const btn = w.find('[data-testid="wiki-insert-link-btn"]')

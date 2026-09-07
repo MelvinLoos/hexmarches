@@ -1,77 +1,31 @@
 // ─── Remark Wiki-Links Plugin ──────────────────────────────────────
 // Custom Remark plugin that intercepts [[Node Title]] text nodes
-// and transforms them into NuxtLink AST nodes pointing to /wiki/<slug>.
+// and transforms them into :wiki-link{title="Node Title"} MDC inline
+// component syntax, so the Vue component resolves the full ltree path
+// at runtime via shared page tree state.
 //
 // Constitution Mandate (Sprint 1.8, §2):
-//   The conversion of [[Wiki-Links]] to Nuxt routing links must occur
-//   exclusively during server-side Markdown-to-AST compilation.
+//   The conversion of [[Wiki-Links]] must occur during Markdown-to-AST
+//   compilation, but path resolution is deferred to the Vue component.
 
 import { visit } from 'unist-util-visit'
-import type { Root, Text, Link } from 'mdast'
-import { slugifyTitle } from '../../core/domain/wiki-node'
+import type { Root } from 'mdast'
 
 // Regex to match [[Node Title]] patterns
 const WIKI_LINK_RE = /\[\[([^\]]+)\]\]/g
 
 /**
- * Remark plugin that transforms [[Wiki-Links]] to /wiki/<slug> links.
- * Operates on the mdast tree, replacing text nodes containing
- * [[ brackets ]] with proper link AST nodes.
+ * Remark plugin that transforms [[Wiki-Links]] into :wiki-link{title="..."}
+ * MDC inline component syntax in the text content.
  */
 export function remarkWikiLinks() {
   return (tree: Root) => {
-    // Use transform function type that works with mdast types
-    visit(tree, 'paragraph', (node, index, parent) => {
-      if (!parent || typeof index !== 'number') return
-
-      const newChildren: (Text | Link)[] = []
-
-      for (const child of node.children) {
-        if (child.type === 'text') {
-          const value = child.value
-          let lastIndex = 0
-          let match: RegExpExecArray | null
-
-          // Reset regex state
-          WIKI_LINK_RE.lastIndex = 0
-
-          while ((match = WIKI_LINK_RE.exec(value)) !== null) {
-            const beforeText = value.slice(lastIndex, match.index)
-            const linkTitle = match[1].trim()
-
-            // Push text before the match
-            if (beforeText) {
-              newChildren.push({ type: 'text', value: beforeText })
-            }
-
-            // Create a link node for non-empty titles
-            if (linkTitle) {
-              const slug = slugifyTitle(linkTitle)
-              const linkNode: Link = {
-                type: 'link',
-                url: `/wiki/${slug}`,
-                title: linkTitle,
-                children: [{ type: 'text', value: linkTitle }],
-              }
-              newChildren.push(linkNode)
-            }
-
-            lastIndex = match.index + match[0].length
-          }
-
-          // Push remaining text after last match
-          const remainingText = value.slice(lastIndex)
-          if (remainingText) {
-            newChildren.push({ type: 'text', value: remainingText })
-          }
-        } else {
-          // Preserve non-text children as-is
-          newChildren.push(child as Link)
-        }
-      }
-
-      // Replace the paragraph's children with our transformed children
-      node.children = newChildren
+    visit(tree, 'text', (node: { value: string }) => {
+      node.value = node.value.replace(WIKI_LINK_RE, (_match: string, title: string) => {
+        const trimmed = title.trim()
+        if (!trimmed) return '' // empty [[ ]] = remove
+        return `:wiki-link{title="${trimmed}"}`
+      })
     })
   }
 }

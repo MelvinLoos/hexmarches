@@ -9,41 +9,41 @@ import type { Root } from 'mdast'
 // AST transformation tests proving [[Node Title]] → NuxtLink AST structure.
 
 describe('Issue #30: Remark Plugin for Wiki-Links', () => {
-  it('should transform [[Node Title]] into a link node', async () => {
+  it('should transform [[Node Title]] into inline MDC component syntax', async () => {
     const input = 'Check out [[The Harpers]] for more info.'
     const processor = unified().use(remarkParse).use(remarkWikiLinks)
     const parsed = processor.parse(input)
     const ast = (await processor.run(parsed)) as Root
 
-    // Walk the AST to find the transformed wiki-link node
     const { visit } = await import('unist-util-visit')
-    const linkNodes: unknown[] = []
-    visit(ast, 'link', (node: unknown) => {
-      linkNodes.push(node)
+    const textNodes: string[] = []
+    visit(ast, 'text', (node: unknown) => {
+      const n = node as { value: string }
+      textNodes.push(n.value)
     })
 
-    expect(linkNodes).toHaveLength(1)
-    const linkNode = linkNodes[0] as { url: string; title?: string; children?: Array<{ value: string }> }
-    expect(linkNode.url).toBe('/wiki/the_harpers')
-    expect(linkNode.title).toBe('The Harpers')
+    const combined = textNodes.join('')
+    expect(combined).toContain(':wiki-link{title="The Harpers"}')
+    // Should NOT contain hardcoded /wiki/the_harpers URL
+    expect(combined).not.toContain('/wiki/the_harpers')
   })
 
-  it('should transform multiple wiki-links in the same paragraph', async () => {
+  it('should transform multiple wiki-links into MDC inline components', async () => {
     const input = '[[Locations]] visited by [[NPCs]] are marked.'
     const processor = unified().use(remarkParse).use(remarkWikiLinks)
     const parsed = processor.parse(input)
     const ast = (await processor.run(parsed)) as Root
 
     const { visit } = await import('unist-util-visit')
-    const linkNodes: unknown[] = []
-    visit(ast, 'link', (node: unknown) => {
-      linkNodes.push(node)
+    const textNodes: string[] = []
+    visit(ast, 'text', (node: unknown) => {
+      const n = node as { value: string }
+      textNodes.push(n.value)
     })
 
-    expect(linkNodes).toHaveLength(2)
-    const urls = (linkNodes as Array<{ url: string }>).map((n) => n.url)
-    expect(urls).toContain('/wiki/locations')
-    expect(urls).toContain('/wiki/npcs')
+    const combined = textNodes.join('')
+    expect(combined).toContain(':wiki-link{title="Locations"}')
+    expect(combined).toContain(':wiki-link{title="NPCs"}')
   })
 
   it('should not transform regular text without [[ ]] brackets', async () => {
@@ -53,15 +53,23 @@ describe('Issue #30: Remark Plugin for Wiki-Links', () => {
     const ast = (await processor.run(parsed)) as Root
 
     const { visit } = await import('unist-util-visit')
+    // Regular markdown links still create link AST nodes
     const linkNodes: unknown[] = []
     visit(ast, 'link', (node: unknown) => {
       linkNodes.push(node)
     })
 
-    // The regular markdown link should remain as-is (1 link)
     expect(linkNodes).toHaveLength(1)
     const linkNode = linkNodes[0] as { url: string }
     expect(linkNode.url).toBe('https://example.com')
+
+    // No wiki-link MDC syntax in text
+    const textNodes: string[] = []
+    visit(ast, 'text', (node: unknown) => {
+      const n = node as { value: string }
+      if (n.value.includes(':wiki-link')) textNodes.push(n.value)
+    })
+    expect(textNodes).toHaveLength(0)
   })
 
   it('should handle empty wiki-link gracefully', async () => {
@@ -71,13 +79,14 @@ describe('Issue #30: Remark Plugin for Wiki-Links', () => {
     const ast = (await processor.run(parsed)) as Root
 
     const { visit } = await import('unist-util-visit')
-    const linkNodes: unknown[] = []
-    visit(ast, 'link', (node: unknown) => {
-      linkNodes.push(node)
+    const textNodes: string[] = []
+    visit(ast, 'text', (node: unknown) => {
+      const n = node as { value: string }
+      if (n.value.includes(':wiki-link')) textNodes.push(n.value)
     })
 
-    // No links should be generated for empty brackets
-    expect(linkNodes).toHaveLength(0)
+    // No wiki-link MDC should be generated for empty [[]]
+    expect(textNodes).toHaveLength(0)
   })
 
   it('should map node titles correctly via slugifyTitle', () => {
