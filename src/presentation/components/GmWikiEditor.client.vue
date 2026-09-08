@@ -321,6 +321,7 @@ onClickOutside(picklistRef, () => {
 })
 
 // Register Ctrl+Shift+K shortcut inside the editor to open Command Palette
+// Also enable preview-only (rich text) mode by default
 onMounted(() => {
   const ed = editorRef.value
   if (ed && typeof (ed as any).domEventHandlers === 'function') {
@@ -334,6 +335,12 @@ onMounted(() => {
       },
     })
   }
+  // Enable rich-text (preview-only) mode by default after editor init
+  setTimeout(() => {
+    if (ed && typeof (ed as any).togglePreviewOnly === 'function') {
+      (ed as any).togglePreviewOnly(true)
+    }
+  }, 100)
 })
 function onEditorKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape' && showAutocomplete.value) {
