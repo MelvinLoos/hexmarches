@@ -99,6 +99,7 @@
         preview-theme="github"
         :toolbars="toolbarLayout"
         :def-toolbars="customToolbars"
+        :language-user-defined="toolbarLanguage"
         @on-upload-img="handleUploadImage"
       />
 
@@ -197,11 +198,19 @@ const toolbarLayout = [
   'bold', 'italic', 'strikeThrough', '|',
   'h1', 'h2', 'h3', 'h4', 'h5', 'h6', '|',
   'quote', 'unorderedList', 'orderedList', '|',
-  'link', 
-  99,  // Our custom wiki-link button (defined in defToolbars)
-  'image', 'table', '|',
+  'link', 'image', 'table', '|',
   'code', 'codeRow', '|',
+  99,  // Our custom wiki-link button (defined in defToolbars)
 ]
+
+// Rename the default "link" button to "External Link"
+const toolbarLanguage = {
+  'en-US': {
+    toolbarTips: {
+      link: 'External Link',
+    },
+  },
+}
 
 const customToolbars = computed(() => {
   const arr: any[] = []

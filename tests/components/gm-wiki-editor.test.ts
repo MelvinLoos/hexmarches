@@ -15,6 +15,7 @@ vi.mock('md-editor-v3', () => ({
       previewTheme: String,
       toolbars: Array,
       defToolbars: Array,
+      languageUserDefined: Object,
     },
     emits: ['update:modelValue'],
     setup(props, { emit, expose }) {
