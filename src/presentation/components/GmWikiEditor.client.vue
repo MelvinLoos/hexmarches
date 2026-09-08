@@ -198,10 +198,9 @@ const toolbarLayout = [
   'bold', 'italic', 'strikeThrough', '|',
   'h1', 'h2', 'h3', 'h4', 'h5', 'h6', '|',
   'quote', 'unorderedList', 'orderedList', '|',
-  'link', 'image', 'table', '|',
+  'link', 99, 'image', 'table', '|',
   'code', 'codeRow', '|',
   'previewOnly',
-  99,  // Our custom wiki-link button (defined in defToolbars)
 ]
 
 // Rename the default "link" button to "External Link"
