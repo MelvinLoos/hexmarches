@@ -13,6 +13,8 @@ vi.mock('md-editor-v3', () => ({
       language: String,
       previewTheme: String,
       markdownItConfig: Function,
+      toolbars: Array,
+      defToolbars: Array,
     },
     emits: ['update:modelValue'],
     setup(props, { emit, expose }) {
@@ -20,6 +22,17 @@ vi.mock('md-editor-v3', () => ({
       const domEventHandlers = vi.fn()
       expose({ insert, focus: vi.fn(), domEventHandlers, getEditorView: vi.fn() })
       return () => h('div', { 'data-testid': 'md-editor' }, [
+        // Render custom toolbar items from defToolbars
+        Array.isArray(props.defToolbars) ? props.defToolbars.map((item, i) => {
+          if (item && typeof item === 'object') {
+            return h('div', {
+              key: i,
+              ...((item as any).props || {}),
+              attrs: ((item as any).props || {}),
+            }, (item as any).children || null)
+          }
+          return null
+        }).filter(Boolean) : null,
         h('textarea', {
           value: props.modelValue,
           'data-testid': 'editor-textarea',

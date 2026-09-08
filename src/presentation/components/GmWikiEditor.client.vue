@@ -91,17 +91,6 @@
     </div>
 
     <div class="editor-wrapper" @keydown="onEditorKeydown">
-      <div class="editor-toolbar">
-        <button
-          data-testid="wiki-insert-link-btn"
-          class="insert-link-btn"
-          :class="{ active: showAutocomplete && insertMode }"
-          title="Insert Wiki Link (Ctrl+Shift+K)"
-          @click="toggleInsertLink"
-        >
-          🔗 Insert Wiki Link
-        </button>
-      </div>
       <MdEditor
         ref="editorRef"
         v-model="content"
@@ -109,6 +98,8 @@
         language="en-US"
         preview-theme="github"
         :markdown-it-config="configureMarkdownIt"
+        :toolbars="toolbarLayout"
+        :def-toolbars="customToolbars"
         @on-upload-img="handleUploadImage"
       />
 
@@ -147,7 +138,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, nextTick, h } from 'vue'
 import { MdEditor } from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'
 import { useDebounceFn, onClickOutside } from '@vueuse/core'
@@ -194,6 +185,33 @@ function extractParentPath(fullPath: string): string {
 function configureMarkdownIt(md: any) {
   md.use(markdownItWikiLinks)
 }
+
+// ── Editor Toolbar Configuration ──────────────────────────────────
+const toolbarLayout = [
+  'bold', 'italic', 'strikeThrough', '|',
+  'h1', 'h2', 'h3', 'h4', 'h5', 'h6', '|',
+  'quote', 'unorderedList', 'orderedList', '|',
+  'link', 'image', 'table', '|',
+  'code', 'codeRow', '|',
+  99  // Our custom wiki-link button (defined in defToolbars)
+]
+
+const customToolbars = computed(() => {
+  const arr: any[] = []
+  // Index 99 — custom wiki-link insert button
+  arr[99] = h(
+    'div',
+    {
+      class: 'md-editor-toolbar-item',
+      title: 'Insert Wiki Link (Ctrl+Shift+K)',
+      'data-testid': 'wiki-insert-link-btn',
+      onClick: toggleInsertLink,
+      style: { color: '#e94560', fontWeight: 'bold', fontSize: '0.9rem', cursor: 'pointer' },
+    },
+    '🔗'
+  )
+  return arr
+})
 
 const selectedParent = ref(extractParentPath(props.initialPath ?? ''))
 
@@ -320,6 +338,11 @@ function toggleInsertLink() {
   autocompleteResults.value = []
   // Open with empty query to show all recent/available nodes
   debouncedAutocomplete('')
+  // Auto-focus the search input once it renders
+  nextTick(() => {
+    const input = document.querySelector('[data-testid="autocomplete-search-input"]') as HTMLInputElement | null
+    input?.focus()
+  })
 }
 
 // Select an autocomplete item
@@ -484,35 +507,6 @@ function handleSave() {
 }
 .save-button:hover {
   background: #f75973;
-}
-
-/* ── Editor Toolbar ──────────────────────────────────────────────── */
-.editor-toolbar {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-.insert-link-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  background: #0f3460;
-  color: #a0a0b0;
-  border: 1px solid #0f3460;
-  border-radius: 6px;
-  font-size: 0.8rem;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.insert-link-btn:hover {
-  background: #1a5276;
-  color: #e0e0e0;
-}
-.insert-link-btn.active {
-  background: #e94560;
-  color: #fff;
-  border-color: #e94560;
 }
 
 /* ── Wiki-Link Autocomplete Styles ───────────────────────────────── */
