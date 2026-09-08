@@ -200,6 +200,7 @@ const toolbarLayout = [
   'quote', 'unorderedList', 'orderedList', '|',
   'link', 'image', 'table', '|',
   'code', 'codeRow', '|',
+  'previewOnly',
   99,  // Our custom wiki-link button (defined in defToolbars)
 ]
 
