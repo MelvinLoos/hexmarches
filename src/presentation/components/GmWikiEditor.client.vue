@@ -97,7 +97,6 @@
         theme="dark"
         language="en-US"
         preview-theme="github"
-        :markdown-it-config="configureMarkdownIt"
         :toolbars="toolbarLayout"
         :def-toolbars="customToolbars"
         @on-upload-img="handleUploadImage"
@@ -139,12 +138,24 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, nextTick, h } from 'vue'
-import { MdEditor } from 'md-editor-v3'
+import { MdEditor, config } from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'
 import { useDebounceFn, onClickOutside } from '@vueuse/core'
 import { useWikiService } from '~/composables/useWikiService'
 import { useCommandPalette } from '~/composables/useCommandPalette'
 import { markdownItWikiLinks } from '~/src/presentation/markdown/markdown-it-wikilinks'
+
+// ── Register markdown-it wiki-link plugin globally for editor preview ──
+config({
+  markdownItPlugins: (plugins) => {
+    plugins.unshift({
+      type: 'wikiLink',
+      plugin: markdownItWikiLinks,
+      options: {},
+    })
+    return plugins
+  },
+})
 import type { WikiNode } from '~/src/core/domain/wiki-node'
 import { generateChildPath, WikiNodeType } from '~/src/core/domain/wiki-node'
 import type { WikiNodeSearchResult } from '~/src/core/domain/wiki-repository'
@@ -181,19 +192,15 @@ function extractParentPath(fullPath: string): string {
   return parts.slice(0, -1).join('.')
 }
 
-// ── markdown-it preview config ─────────────────────────────────────
-function configureMarkdownIt(md: any) {
-  md.use(markdownItWikiLinks)
-}
-
 // ── Editor Toolbar Configuration ──────────────────────────────────
 const toolbarLayout = [
   'bold', 'italic', 'strikeThrough', '|',
   'h1', 'h2', 'h3', 'h4', 'h5', 'h6', '|',
   'quote', 'unorderedList', 'orderedList', '|',
-  'link', 'image', 'table', '|',
+  'link', 
+  99,  // Our custom wiki-link button (defined in defToolbars)
+  'image', 'table', '|',
   'code', 'codeRow', '|',
-  99  // Our custom wiki-link button (defined in defToolbars)
 ]
 
 const customToolbars = computed(() => {

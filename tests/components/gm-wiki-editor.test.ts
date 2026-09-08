@@ -5,6 +5,7 @@ import GmWikiEditor from '~/src/presentation/components/GmWikiEditor.client.vue'
 import type { WikiNode } from '~/src/core/domain/wiki-node'
 
 vi.mock('md-editor-v3', () => ({
+  config: vi.fn(),
   MdEditor: defineComponent({
     name: 'MdEditor',
     props: {
@@ -12,7 +13,6 @@ vi.mock('md-editor-v3', () => ({
       theme: String,
       language: String,
       previewTheme: String,
-      markdownItConfig: Function,
       toolbars: Array,
       defToolbars: Array,
     },
