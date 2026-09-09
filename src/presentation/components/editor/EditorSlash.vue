@@ -61,6 +61,7 @@ const items: SlashItem[] = [
   { id: 'ordered', label: 'Ordered List', icon: '1.', filter: 'ordered numbered list', action: (ed) => ed.chain().focus().toggleOrderedList().run() },
   { id: 'quote', label: 'Blockquote', icon: '\"', filter: 'quote blockquote', action: (ed) => ed.chain().focus().toggleBlockquote().run() },
   { id: 'code', label: 'Code Block', icon: '<>', filter: 'code', action: (ed) => ed.chain().focus().toggleCodeBlock().run() },
+  { id: 'wikilink', label: 'Link Page', icon: '🔗', filter: 'link page wiki wikilink', action: (ed) => { ed.commands.triggerWikiLinkSearch?.() } },
   { id: 'gmsecret', label: 'GM Secret', icon: '🔒', filter: 'gm secret sec', action: (ed) => { ed.commands.insertGmSecret?.('GM Note') } },
 ]
 

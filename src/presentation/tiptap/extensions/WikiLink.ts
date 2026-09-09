@@ -41,6 +41,13 @@ declare module '@tiptap/core' {
        * Used by the bubble menu "Link" button to wrap highlighted text.
        */
       setWikiLink: (title: string) => ReturnType
+
+      /**
+       * Insert the "[[" trigger at the cursor so the suggestion plugin
+       * opens the wiki-link autocomplete picklist. Used by the slash
+       * menu "Link Page" command for discoverability.
+       */
+      triggerWikiLinkSearch: () => ReturnType
     }
   }
 }
@@ -118,6 +125,20 @@ export const WikiLink = Node.create<WikiLinkOptions>({
             type: this.name,
             attrs: { title },
           })
+        },
+      // Inserts the `[[` suggestion trigger at the cursor, which makes
+      // @tiptap/suggestion open the wiki-link autocomplete picklist.
+      // This lets the slash menu expose wiki-linking without the user
+      // needing to know the trigger syntax (`allowSpaces` etc. handled
+      // by the existing suggestion configuration).
+      //
+      // Uses the injected `chain` (seeded with the command's transaction)
+      // instead of `editor.chain()`: the CommandManager dispatches the
+      // shared transaction exactly once after the callback returns.
+      triggerWikiLinkSearch:
+        () =>
+        ({ chain }) => {
+          return chain().focus().insertContent('[[').run()
         },
     }
   },
