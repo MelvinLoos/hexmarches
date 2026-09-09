@@ -91,6 +91,7 @@
     </div>
 
     <!-- Editor: WYSIWYG (TipTap) or Raw (textarea) -->
+    <GmEditorToolbar v-if="!isRawMode && editor" :editor="editor" />
     <div v-if="!isRawMode && editor" :key="editorKey" data-testid="tiptap-editor" class="editor-wrapper tiptap-editor-wrapper" @dragover.prevent @drop.prevent="handleEditorDrop">
       <EditorBubble v-if="editor" :editor="editor" />
       <EditorSlash v-if="editor" :editor="editor" />
@@ -148,6 +149,7 @@ import { getEditorExtensions } from '~/src/presentation/tiptap/editor-setup'
 import { useAssetUpload } from '~/composables/useAssetUpload'
 import EditorBubble from '~/src/presentation/components/editor/EditorBubble.vue'
 import EditorSlash from '~/src/presentation/components/editor/EditorSlash.vue'
+import GmEditorToolbar from '~/src/presentation/components/editor/GmEditorToolbar.vue'
 import type { Editor } from '@tiptap/core'
 import type { WikiNode } from '~/src/core/domain/wiki-node'
 import { generateChildPath, WikiNodeType } from '~/src/core/domain/wiki-node'
@@ -412,8 +414,22 @@ function handleSave() {
 .raw-mode-toggle:hover { background: #1a3a70; }
 .raw-markdown-textarea { width: 100%; min-height: 400px; padding: 16px; background: #1a1a2e; border: 1px solid #0f3460; border-radius: 6px; color: #e0e0e0; font-family: 'Courier New', monospace; font-size: 0.95rem; line-height: 1.6; resize: vertical; }
 .raw-markdown-textarea:focus { outline: none; border-color: #e94560; }
-.tiptap-content { padding: 16px; background: #1a1a2e; border: 1px solid #0f3460; border-radius: 6px; min-height: 400px; color: #e0e0e0; font-size: 0.95rem; line-height: 1.6; }
-.editor-wrapper { position: relative; }
+.tiptap-content { padding: 16px; background: #1a1a2e; border: 1px solid #0f3460; border-radius: 6px; min-height: 400px; color: #e0e0e0; font-size: 0.95rem; line-height: 1.6; box-sizing: border-box; }
+/* Make the actual ProseMirror contenteditable fill the whole box instead of
+   shrinking to a single line of text. */
+.tiptap-content :deep(.ProseMirror) {
+  min-height: calc(400px - 32px); /* 400px box minus 16px top/bottom padding */
+  outline: none;
+  box-sizing: border-box;
+}
+.tiptap-content :deep(p.is-editor-empty:first-child::before) {
+  content: attr(data-placeholder);
+  color: #6b7280;
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+.editor-wrapper { position: relative; width: 100%; }
 .autocomplete-overlay { position: fixed; inset: 0; z-index: 9998; display: flex; align-items: center; justify-content: center; }
 .autocomplete-backdrop { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.5); z-index: 0; }
 .autocomplete-picklist { position: relative; z-index: 1; width: 500px; max-width: 90vw; max-height: 50vh; overflow-y: auto; background: #1a1a2e; border: 1px solid #e94560; border-radius: 8px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6); }

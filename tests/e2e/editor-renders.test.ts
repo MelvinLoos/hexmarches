@@ -27,6 +27,26 @@ test('ProseMirror editor DOM is rendered on the wiki edit page', async ({ page }
   // ── Assertion 2: The editor container is visible ────────────────
   await expect(page.getByTestId('tiptap-editor')).toBeVisible({ timeout: 5000 })
 
+  // ── Assertion 2b: The editor occupies a full text block, not a single line ──
+  const proseBox = await page.locator('.ProseMirror').boundingBox()
+  expect(proseBox?.height).toBeGreaterThan(300)
+
+  // ── Assertion 2c: The persistent formatting toolbar is rendered ──
+  await expect(page.getByTestId('editor-toolbar')).toBeVisible({ timeout: 5000 })
+  await expect(page.getByTestId('toolbar-bold')).toBeVisible()
+  await expect(page.getByTestId('toolbar-h1')).toBeVisible()
+  await expect(page.getByTestId('toolbar-bullet-list')).toBeVisible()
+  await expect(page.getByTestId('toolbar-undo')).toBeVisible()
+
+  // ── Assertion 2d: Toolbar formatting is interactive ─────────────
+  const proseMirror = page.locator('.ProseMirror')
+  await proseMirror.click()
+  await proseMirror.type('Bold me', { delay: 10 })
+  // Select all so the bold mark applies to the existing text
+  await page.keyboard.press('ControlOrMeta+a')
+  await page.getByTestId('toolbar-bold').click()
+  await expect(page.locator('.ProseMirror strong')).toContainText('Bold me')
+
   // ── Assertion 3: Title input is present ─────────────────────────
   await expect(page.getByTestId('wiki-title')).toBeVisible()
 

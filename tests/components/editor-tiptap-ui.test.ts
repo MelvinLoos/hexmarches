@@ -35,6 +35,7 @@ vi.mock('#imports', () => ({ useSupabaseClient: () => ({}) }))
 vi.mock('~/composables/useAssetUpload', () => ({ useAssetUpload: () => ({ uploadAsset: vi.fn(), uploading: { value: false }, error: { value: null }, lastUploadedUrl: { value: null } }) }))
 vi.mock('~/src/presentation/components/editor/EditorBubble.vue', () => ({ default: { name: 'EditorBubble', props: { editor: Object }, template: '<div data-testid="bubble-menu"></div>' } }))
 vi.mock('~/src/presentation/components/editor/EditorSlash.vue', () => ({ default: { name: 'EditorSlash', props: { editor: Object }, template: '<div data-testid="slash-menu"></div>' } }))
+vi.mock('~/src/presentation/components/editor/GmEditorToolbar.vue', () => ({ default: { name: 'GmEditorToolbar', props: { editor: Object }, template: '<div data-testid="editor-toolbar"></div>' } }))
 import GmWikiEditor from '~/src/presentation/components/GmWikiEditor.client.vue'
 import type { WikiNode } from '~/src/core/domain/wiki-node'
 
