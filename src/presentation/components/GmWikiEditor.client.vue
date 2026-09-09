@@ -91,6 +91,8 @@
 
     <!-- Editor: WYSIWYG (TipTap) or Raw (textarea) -->
     <div v-if="!isRawMode && editor" data-testid="tiptap-editor" class="editor-wrapper tiptap-editor-wrapper">
+      <EditorBubble v-if="editor" :editor="editor" />
+      <EditorSlash v-if="editor" :editor="editor" />
       <EditorContent :editor="editor" class="tiptap-content" />
       <!-- Wiki-Link Autocomplete Picklist -->
       <div v-if="showAutocomplete" data-testid="autocomplete-overlay" class="autocomplete-overlay">
@@ -141,6 +143,8 @@ import { useDebounceFn, onClickOutside } from '@vueuse/core'
 import { useWikiService } from '~/composables/useWikiService'
 import { useCommandPalette } from '~/composables/useCommandPalette'
 import { createEditor } from '~/src/presentation/tiptap/editor-setup'
+import EditorBubble from "~/src/presentation/components/editor/EditorBubble.vue"
+import EditorSlash from "~/src/presentation/components/editor/EditorSlash.vue"
 import type { Editor } from '@tiptap/core'
 import type { WikiNode } from '~/src/core/domain/wiki-node'
 import { generateChildPath, WikiNodeType } from '~/src/core/domain/wiki-node'
