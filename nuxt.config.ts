@@ -60,7 +60,7 @@ export default defineNuxtConfig({
 
   vite: {
     optimizeDeps: {
-      include: ['md-editor-v3'],
+      include: [],
     },
   },
 })
