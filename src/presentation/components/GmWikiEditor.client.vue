@@ -96,31 +96,6 @@
       <EditorBubble v-if="editor" :editor="editor" />
       <EditorSlash v-if="editor" :editor="editor" />
       <EditorContent :editor="editor" class="tiptap-content" />
-      <!-- Wiki-Link Autocomplete Picklist -->
-      <div v-if="showAutocomplete" data-testid="autocomplete-overlay" class="autocomplete-overlay">
-        <div data-testid="autocomplete-backdrop" class="autocomplete-backdrop" @click="closeAutocomplete" />
-        <div ref="picklistRef" data-testid="wiki-autocomplete-picklist" class="autocomplete-picklist">
-          <input
-            v-if="insertMode"
-            v-model="autocompleteQuery"
-            data-testid="autocomplete-search-input"
-            type="text"
-            placeholder="Search wiki nodes..."
-            class="autocomplete-search-input"
-          />
-          <div
-            v-for="result in autocompleteResults"
-            :key="result.id"
-            class="autocomplete-item"
-            data-testid="autocomplete-item"
-            @click="selectAutocompleteItem(result.title)"
-          >
-            <span class="autocomplete-title">{{ result.title }}</span>
-            <span class="autocomplete-type">{{ result.entityType || 'GENERAL' }}</span>
-          </div>
-          <div v-if="autocompleteResults.length === 0" class="autocomplete-empty">No matching nodes found</div>
-        </div>
-      </div>
     </div>
 
     <div v-else class="editor-wrapper raw-editor-wrapper">
@@ -140,10 +115,8 @@
 
 </template>
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { EditorContent, useEditor } from '@tiptap/vue-3'
-import { useDebounceFn, onClickOutside } from '@vueuse/core'
-import { useWikiService } from '~/composables/useWikiService'
 import { useCommandPalette } from '~/composables/useCommandPalette'
 import { getEditorExtensions } from '~/src/presentation/tiptap/editor-setup'
 import { useAssetUpload } from '~/composables/useAssetUpload'
@@ -153,7 +126,6 @@ import GmEditorToolbar from '~/src/presentation/components/editor/GmEditorToolba
 import type { Editor } from '@tiptap/core'
 import type { WikiNode } from '~/src/core/domain/wiki-node'
 import { generateChildPath, WikiNodeType } from '~/src/core/domain/wiki-node'
-import type { WikiNodeSearchResult } from '~/src/core/domain/wiki-repository'
 
 const props = defineProps<{
   initialTitle?: string
@@ -199,69 +171,8 @@ const editor = useEditor({
   },
 })
 
-// ── Wiki-Link Autocomplete State ───────────────────────────────
-const wikiService = useWikiService()
+// ── Editor command palette trigger ─────────────────────────────
 const commandPalette = useCommandPalette()
-const showAutocomplete = ref(false)
-const autocompleteQuery = ref('')
-const autocompleteResults = ref<WikiNodeSearchResult[]>([])
-const picklistRef = ref<HTMLElement | null>(null)
-const insertMode = ref(false)
-
-const wikilinkOpenRe = /\[\[([^[\]]*)$/
-
-function extractAutocompleteQuery(text: string): string | null {
-  const match = text.match(wikilinkOpenRe)
-  return match ? match[1] : null
-}
-
-function injectWikilink(title: string) {
-  const ed = editor.value
-  if (insertMode.value && ed) {
-    ed.commands.insertContent(`[[${title}]]`)
-  } else if (!insertMode.value) {
-    const match = currentMarkdown.value.match(wikilinkOpenRe)
-    if (!match) return
-    const before = currentMarkdown.value.slice(0, match.index!)
-    const after = currentMarkdown.value.slice(match.index! + match[0].length)
-    currentMarkdown.value = before + `[[${title}]]` + after
-  }
-  closeAutocomplete()
-}
-
-const debouncedAutocomplete = useDebounceFn(async (query: string) => {
-  try {
-    const searchQuery = query.trim() || ' '
-    autocompleteResults.value = await wikiService.searchNodes(searchQuery, 8)
-  } catch {
-    autocompleteResults.value = []
-  }
-}, 300)
-
-watch(currentMarkdown, (val) => {
-  if (insertMode.value) return
-  const query = extractAutocompleteQuery(val)
-  if (query !== null) {
-    showAutocomplete.value = true
-    autocompleteQuery.value = query
-    debouncedAutocomplete(query || '')
-  } else {
-    closeAutocomplete()
-  }
-}, { immediate: true })
-
-watch(autocompleteQuery, (val) => {
-  if (insertMode.value) debouncedAutocomplete(val || '')
-})
-
-function closeAutocomplete() {
-  showAutocomplete.value = false
-  insertMode.value = false
-  autocompleteQuery.value = ''
-  autocompleteResults.value = []
-}
-
-onClickOutside(picklistRef, () => closeAutocomplete())
 
 onMounted(() => {
   // Key binding runs once editor is mounted
@@ -275,26 +186,6 @@ onMounted(() => {
     })
   }
 })
-
-function toggleInsertLink() {
-  if (showAutocomplete.value && insertMode.value) {
-    closeAutocomplete()
-    return
-  }
-  insertMode.value = true
-  showAutocomplete.value = true
-  autocompleteQuery.value = ''
-  autocompleteResults.value = []
-  debouncedAutocomplete('')
-  nextTick(() => {
-    const input = document.querySelector('[data-testid="autocomplete-search-input"]') as HTMLInputElement | null
-    input?.focus()
-  })
-}
-
-function selectAutocompleteItem(title: string) {
-  injectWikilink(title)
-}
 
 // ── Folder / Path logic ────────────────────────────────────────
 const folderOptions = computed(() => props.parentOptions ?? [])
@@ -430,14 +321,4 @@ function handleSave() {
   pointer-events: none;
 }
 .editor-wrapper { position: relative; width: 100%; }
-.autocomplete-overlay { position: fixed; inset: 0; z-index: 9998; display: flex; align-items: center; justify-content: center; }
-.autocomplete-backdrop { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.5); z-index: 0; }
-.autocomplete-picklist { position: relative; z-index: 1; width: 500px; max-width: 90vw; max-height: 50vh; overflow-y: auto; background: #1a1a2e; border: 1px solid #e94560; border-radius: 8px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6); }
-.autocomplete-search-input { width: 100%; padding: 10px 12px; background: transparent; border: none; border-bottom: 1px solid #0f3460; color: #e0e0e0; font-size: 0.85rem; outline: none; }
-.autocomplete-search-input::placeholder { color: #555; }
-.autocomplete-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; cursor: pointer; transition: background 0.15s; }
-.autocomplete-item:hover { background: rgba(233, 69, 96, 0.15); }
-.autocomplete-title { color: #e0e0e0; font-size: 0.85rem; font-weight: 600; }
-.autocomplete-type { color: #e94560; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; }
-.autocomplete-empty { padding: 12px; text-align: center; color: #666; font-size: 0.8rem; }
 </style>

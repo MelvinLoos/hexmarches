@@ -32,7 +32,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import type { Editor } from '@tiptap/core'
 
 const props = defineProps<{
@@ -88,6 +88,57 @@ function hide() {
   visible.value = false
   query.value = ''
 }
+
+// ── Keyboard trigger ─────────────────────────────────────────────
+// Pressing "/" on the editor opens the menu at the cursor; while open,
+// printable characters extend the filter query, Enter selects the first
+// match, Escape dismisses, and Backspace edits the query.
+function handleEditorKeydown({ event }: { event: KeyboardEvent }) {
+  const editor = props.editor
+  if (!editor) return
+
+  if (!visible.value) {
+    if (event.key === '/') {
+      event.preventDefault()
+      openAtCursor(editor)
+    }
+    return
+  }
+
+  switch (event.key) {
+    case 'Escape':
+      hide()
+      break
+    case 'Enter':
+      event.preventDefault()
+      const first = filteredItems.value[0]
+      if (first) selectItem(first)
+      break
+    case 'Backspace':
+      event.preventDefault()
+      query.value = query.value.slice(0, -1)
+      break
+    default:
+      if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
+        event.preventDefault()
+        query.value += event.key
+      }
+  }
+}
+
+function openAtCursor(editor: Editor) {
+  const coords = editor.view.coordsAtPos(editor.state.selection.from)
+  if (!coords) return
+  showAt({ top: coords.top + 24, left: coords.left })
+}
+
+onMounted(() => {
+  props.editor?.on('keydown', handleEditorKeydown)
+})
+
+onBeforeUnmount(() => {
+  props.editor?.off('keydown', handleEditorKeydown)
+})
 
 defineExpose({ showAt, hide, visible, query })
 </script>

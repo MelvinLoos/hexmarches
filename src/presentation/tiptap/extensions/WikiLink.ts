@@ -1,12 +1,31 @@
 // ─── WikiLink TipTap Node Extension ───────────────────────────
 // Custom inline node that renders [[Wiki-Links]] as styled spans.
 // Integrates with tiptap-markdown for bidirectional serialization.
+//
+// Authoring UX: wiring @tiptap/suggestion so that typing "[[" opens a
+// floating picklist at the cursor. The picklist is rendered by the pure
+// Vue component `WikiLinkSuggestion.vue` via VueRenderer, queries the
+// WikiService through `searchNodes()`, and inserts this wikiLink node.
 
 import { Node } from '@tiptap/core'
+import { Suggestion } from '@tiptap/suggestion'
+import { VueRenderer } from '@tiptap/vue-3'
+import { useWikiService } from '~/composables/useWikiService'
+import type { WikiNodeSearchResult } from '~/src/core/domain/wiki-repository'
+import WikiLinkSuggestion from '~/src/presentation/tiptap/suggestions/WikiLinkSuggestion.vue'
 
 export interface WikiLinkOptions {
   HTMLAttributes: Record<string, any>
 }
+
+/** A single suggestion line shown in the wiki-link autocomplete picklist. */
+export interface WikiLinkSuggestionItem {
+  id: string
+  title: string
+  entityType?: string
+}
+
+const WIKI_LINK_SUGGESTION_LIMIT = 8
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
@@ -75,6 +94,69 @@ export const WikiLink = Node.create<WikiLinkOptions>({
           })
         },
     }
+  },
+
+  addProseMirrorPlugins() {
+    return [
+      Suggestion<WikiLinkSuggestionItem, WikiLinkSuggestionItem>({
+        editor: this.editor,
+        char: '[[',
+        // Wiki titles may contain spaces ("[[The Harpers]]") — allow the
+        // suggestion query to span whitespace while the trigger is typed.
+        allowSpaces: true,
+        minQueryLength: 0,
+        decorationTag: 'span',
+        decorationClass: 'wiki-link-suggestion',
+        items: async ({ query }) => {
+          // The plugin query is relative to the trigger char; a leading "["
+          // from the second bracket is stripped before searching.
+          const normalized = query.replace(/^\[+/, '').trim()
+          const searchQuery = normalized || ' '
+          let results: WikiNodeSearchResult[]
+          try {
+            results = await useWikiService().searchNodes(searchQuery, WIKI_LINK_SUGGESTION_LIMIT)
+          } catch {
+            results = []
+          }
+          return results.map((entry) => ({
+            id: entry.node.id,
+            title: entry.node.title,
+            entityType: entry.node.entityType,
+          }))
+        },
+        command: ({ editor, range, props }) => {
+          editor.chain().focus()
+            .deleteRange(range)
+            .insertWikiLink(props.title)
+            .run()
+        },
+        render: () => {
+          let renderer: VueRenderer | null = null
+          let unmount: (() => void) | null = null
+          return {
+            onStart: (props) => {
+              renderer = new VueRenderer(WikiLinkSuggestion, {
+                editor: props.editor,
+                props,
+              })
+              const element = renderer.element
+              if (element) {
+                unmount = props.mount(element)
+              }
+            },
+            onUpdate: (props) => {
+              renderer?.updateProps(props)
+            },
+            onExit: () => {
+              renderer?.destroy()
+              renderer = null
+              unmount?.()
+              unmount = null
+            },
+          }
+        },
+      }),
+    ]
   },
 
   addStorage() {
