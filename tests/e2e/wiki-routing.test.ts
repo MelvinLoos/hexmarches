@@ -35,8 +35,8 @@ test('Create this page navigates to editor and save flow works', async ({ page }
   // Should land on the editor page
   await page.waitForURL('**/dm/wiki/edit', { timeout: 10000 })
 
-  // CRITICAL: Assert the actual md-editor-v3 DOM is rendered
-  await expect(page.locator('.md-editor')).toBeVisible({ timeout: 15000 })
+  // CRITICAL: Assert the actual TipTap editor DOM is rendered (visible to the user)
+  await expect(page.getByTestId('tiptap-editor')).toBeVisible({ timeout: 15000 })
   await expect(page.getByTestId('wiki-save')).toBeVisible({ timeout: 5000 })
 
   // ── New: Parent Selector UI assertions ──────────────────────────
