@@ -1,0 +1,5 @@
+# Cline Rules
+
+## Section 3: Shared Codebase Responsibility
+
+- **No Orphans:** You are fully accountable for the `npm run verify` pipeline passing. Never abandon a failing test by claiming "you didn't write it" or "it is out of scope." If a test fails on your branch, you must fix the test or the underlying implementation before closing your task.
