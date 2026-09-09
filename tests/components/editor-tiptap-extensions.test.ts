@@ -20,6 +20,10 @@ vi.mock('~/composables/useCommandPalette', () => ({
   useCommandPalette: () => ({ open: vi.fn() }),
 }))
 
+const { editorBox, useEditorMock } = vi.hoisted(() => ({
+  editorBox: { value: null as any },
+  useEditorMock: vi.fn(() => editorBox),
+}))
 vi.mock('@tiptap/vue-3', () => ({
   EditorContent: defineComponent({
     name: 'EditorContent',
@@ -36,11 +40,10 @@ vi.mock('@tiptap/vue-3', () => ({
     props: { editor: Object },
     setup(_, { slots }) { return () => slots.default ? slots.default() : null },
   }),
+  useEditor: useEditorMock,
 }))
-
-const { useEditorMock } = vi.hoisted(() => ({ useEditorMock: vi.fn() }))
 vi.mock('~/src/presentation/tiptap/editor-setup', () => ({
-  createEditor: useEditorMock,
+  getEditorExtensions: () => [],
 }))
 
 vi.mock('@tiptap/starter-kit', () => ({ default: { name: 'starterKit', type: 'extension' } }))
@@ -55,6 +58,8 @@ vi.mock('@tiptap/core', () => ({
 
 vi.mock('#imports', () => ({ useSupabaseClient: () => ({}) }))
 vi.mock('~/composables/useAssetUpload', () => ({ useAssetUpload: () => ({ uploadAsset: vi.fn(), uploading: { value: false }, error: { value: null }, lastUploadedUrl: { value: null } }) }))
+vi.mock('~/src/presentation/components/editor/EditorBubble.vue', () => ({ default: { name: 'EditorBubble', props: { editor: Object }, template: '<div data-testid="bubble-menu"></div>' } }))
+vi.mock('~/src/presentation/components/editor/EditorSlash.vue', () => ({ default: { name: 'EditorSlash', props: { editor: Object }, template: '<div data-testid="slash-menu"></div>' } }))
 import GmWikiEditor from '~/src/presentation/components/GmWikiEditor.client.vue'
 import type { WikiNode } from '~/src/core/domain/wiki-node'
 
@@ -76,8 +81,8 @@ function makeMockEditor() {
   }
 }
 
-function mountComponent(overrides: Record<string, unknown> = {}) {
-  useEditorMock.mockReturnValue(makeMockEditor())
+function mountComponent(overrides: Record<string, unknown> = {}, preBuilt?: ReturnType<typeof makeMockEditor>) {
+  editorBox.value = preBuilt ?? makeMockEditor()
   return mount(GmWikiEditor, {
     props: {
       initialTitle: (overrides.initialTitle as string) ?? '',
@@ -92,8 +97,8 @@ function mountComponent(overrides: Record<string, unknown> = {}) {
 
 describe('Sprint 1.12 Task 2: Custom Node Extensions', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-    useEditorMock.mockReset()
+    vi.clearAllMocks(); editorBox.value = null
+    useEditorMock?.mockReset?.()
   })
 
   describe('WikiLink Extension', () => {
@@ -106,9 +111,8 @@ describe('Sprint 1.12 Task 2: Custom Node Extensions', () => {
         content: [{ type: 'paragraph', content: [{ type: 'text', text: 'The ' }, { type: 'wikiLink', attrs: { title: 'Harpers' } }] }],
       }))
       mockEd.setMarkdown('The [[Harpers]] faction')
-      useEditorMock.mockReturnValue(mockEd)
 
-      mountComponent({ initialContent: 'The [[Harpers]] faction' })
+      mountComponent({ initialContent: 'The [[Harpers]] faction' }, mockEd)
       expect(mockEd.storage.markdown.getMarkdown()).toBe('The [[Harpers]] faction')
     })
 
@@ -116,9 +120,8 @@ describe('Sprint 1.12 Task 2: Custom Node Extensions', () => {
       const mockEd = makeMockEditor()
       let capturedContent: any = null
       mockEd.commands.setContent = vi.fn((content: any) => { capturedContent = content; return true })
-      useEditorMock.mockReturnValue(mockEd)
 
-      mountComponent({ initialContent: 'The [[Harpers]] faction' })
+      mountComponent({ initialContent: 'The [[Harpers]] faction' }, mockEd)
       // Verify editor was initialized with content containing wiki-link
       expect(useEditorMock).toHaveBeenCalled()
     })
@@ -127,9 +130,8 @@ describe('Sprint 1.12 Task 2: Custom Node Extensions', () => {
       const input = 'See [[Locations]] and [[NPCs]] for more'
       const mockEd = makeMockEditor()
       mockEd.setMarkdown(input)
-      useEditorMock.mockReturnValue(mockEd)
 
-      mountComponent({ initialContent: input })
+      mountComponent({ initialContent: input }, mockEd)
       expect(mockEd.storage.markdown.getMarkdown()).toBe(input)
     })
   })
@@ -142,18 +144,16 @@ describe('Sprint 1.12 Task 2: Custom Node Extensions', () => {
         content: [{ type: 'gmSecret', attrs: { title: 'Trap' }, content: [{ type: 'paragraph', content: [{ type: 'text', text: 'DC 15 pit trap' }] }] }],
       }))
       mockEd.setMarkdown('::gm-secret{title="Trap"}\nDC 15 pit trap\n::')
-      useEditorMock.mockReturnValue(mockEd)
 
-      mountComponent({ initialContent: '::gm-secret{title="Trap"}\nDC 15 pit trap\n::' })
+      mountComponent({ initialContent: '::gm-secret{title="Trap"}\nDC 15 pit trap\n::' }, mockEd)
       expect(mockEd.storage.markdown.getMarkdown()).toBe('::gm-secret{title="Trap"}\nDC 15 pit trap\n::')
     })
 
     it('2.5: GmSecret markdown ::gm-secret{...} is parsed to GmSecret node', () => {
       const mockEd = makeMockEditor()
       mockEd.setMarkdown('::gm-secret{title="Hidden"}\nSecret text\n::')
-      useEditorMock.mockReturnValue(mockEd)
 
-      mountComponent({ initialContent: '::gm-secret{title="Hidden"}\nSecret text\n::' })
+      mountComponent({ initialContent: '::gm-secret{title="Hidden"}\nSecret text\n::' }, mockEd)
       expect(useEditorMock).toHaveBeenCalled()
       // The factory should have been called with content that includes ::gm-secret
     })
@@ -162,9 +162,8 @@ describe('Sprint 1.12 Task 2: Custom Node Extensions', () => {
       const input = '# Overview\n\nThe **party** found [[Treasure]] in a dungeon.\n\n::gm-secret{title="Trap DC"}\nDC 15 pit trap\n::\n\n- End of report'
       const mockEd = makeMockEditor()
       mockEd.setMarkdown(input)
-      useEditorMock.mockReturnValue(mockEd)
 
-      mountComponent({ initialContent: input })
+      mountComponent({ initialContent: input }, mockEd)
       expect(mockEd.storage.markdown.getMarkdown()).toBe(input)
     })
   })

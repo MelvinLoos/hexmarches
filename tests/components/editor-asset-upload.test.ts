@@ -6,14 +6,16 @@ vi.mock('@vueuse/core', () => ({ useDebounceFn: (fn: Function) => fn, onClickOut
 vi.mock('~/composables/useWikiService', () => ({ useWikiService: () => ({ searchNodes: vi.fn().mockResolvedValue([]), getInboundReferences: vi.fn().mockResolvedValue([]), findInboundReferences: vi.fn().mockResolvedValue([]) }) }))
 vi.mock('~/composables/useCommandPalette', () => ({ useCommandPalette: () => ({ open: vi.fn() }) }))
 
+const { editorBox } = vi.hoisted(() => ({ editorBox: { value: null as any } }))
 vi.mock('@tiptap/vue-3', () => ({
   EditorContent: defineComponent({ name: 'EditorContent', props: { editor: Object }, setup() { return () => h('div', { 'data-testid': 'tiptap-editor' }) } }),
   BubbleMenu: defineComponent({ name: 'BubbleMenu', props: { editor: Object }, setup(_, { slots }) { return () => slots.default ? slots.default() : null } }),
   FloatingMenu: defineComponent({ name: 'FloatingMenu', props: { editor: Object }, setup(_, { slots }) { return () => slots.default ? slots.default() : null } }),
+  useEditor: vi.fn(() => editorBox),
 }))
 
 const { useEditorMock } = vi.hoisted(() => ({ useEditorMock: vi.fn() }))
-vi.mock('~/src/presentation/tiptap/editor-setup', () => ({ createEditor: useEditorMock }))
+vi.mock('~/src/presentation/tiptap/editor-setup', () => ({ getEditorExtensions: () => [] }))
 vi.mock('@tiptap/starter-kit', () => ({ default: { name: 'starterKit', type: 'extension' } }))
 vi.mock('@tiptap/extension-bubble-menu', () => ({ default: { name: 'bubbleMenu', type: 'extension' } }))
 vi.mock('@tiptap/extension-floating-menu', () => ({ default: { name: 'floatingMenu', type: 'extension' } }))
@@ -22,6 +24,8 @@ vi.mock('@tiptap/core', () => ({ Extension: { create: (c: any) => ({ ...c, type:
 
 vi.mock('#imports', () => ({ useSupabaseClient: () => ({}) }))
 vi.mock('~/composables/useAssetUpload', () => ({ useAssetUpload: () => ({ uploadAsset: vi.fn(), uploading: { value: false }, error: { value: null }, lastUploadedUrl: { value: null } }) }))
+vi.mock('~/src/presentation/components/editor/EditorBubble.vue', () => ({ default: { name: 'EditorBubble', props: { editor: Object }, template: '<div data-testid="bubble-menu"></div>' } }))
+vi.mock('~/src/presentation/components/editor/EditorSlash.vue', () => ({ default: { name: 'EditorSlash', props: { editor: Object }, template: '<div data-testid="slash-menu"></div>' } }))
 import GmWikiEditor from '~/src/presentation/components/GmWikiEditor.client.vue'
 import type { WikiNode } from '~/src/core/domain/wiki-node'
 
@@ -42,7 +46,7 @@ function makeMockEditor() {
 }
 
 function mountComponent(overrides: Record<string, unknown> = {}) {
-  useEditorMock.mockReturnValue(makeMockEditor())
+  editorBox.value = makeMockEditor()
   return mount(GmWikiEditor, {
     props: {
       initialTitle: (overrides.initialTitle as string) ?? '',
@@ -56,7 +60,7 @@ function mountComponent(overrides: Record<string, unknown> = {}) {
 }
 
 describe('Sprint 1.12 Task 4: Asset Upload Interception', () => {
-  beforeEach(() => { vi.clearAllMocks(); useEditorMock.mockReset() })
+  beforeEach(() => { vi.clearAllMocks(); editorBox.value = null; useEditorMock?.mockReset?.() })
 
   it('4.1: component mounts successfully', () => {
     expect(mountComponent().exists()).toBe(true)
