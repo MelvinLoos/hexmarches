@@ -31,6 +31,14 @@
       >
         <del>S</del>
       </button>
+      <button
+        class="px-2 py-1 rounded text-sm hover:bg-gm-border transition-colors"
+        data-testid="bubble-link"
+        title="Wiki Link"
+        @click="linkSelectedText"
+      >
+        🔗
+      </button>
       <span class="w-px bg-gm-border mx-1" />
       <button
         class="px-2 py-1 rounded text-sm hover:bg-gm-border transition-colors"
@@ -81,6 +89,27 @@ function updatePosition() {
     left: `${coords.left}px`,
   }
   visible.value = true
+}
+
+/** Text currently highlighted in the editor, trimmed for the link title. */
+function getSelectedText(): string {
+  const ed = props.editor
+  if (!ed) return ''
+  const { from, to } = ed.state.selection
+  return ed.state.doc.textBetween(from, to).trim()
+}
+
+/**
+ * Wrap the highlighted text in a wikiLink node by delegating to the
+ * WikiLink extension's `setWikiLink` command.
+ */
+function linkSelectedText() {
+  const ed = props.editor
+  if (!ed) return
+  const title = getSelectedText()
+  if (!title) return
+  ed.chain().focus().setWikiLink(title).run()
+  visible.value = false
 }
 
 watch(

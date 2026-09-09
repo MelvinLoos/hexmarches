@@ -35,6 +35,12 @@ declare module '@tiptap/core' {
        * Insert a [[Wiki-Link]] at the current cursor position.
        */
       insertWikiLink: (title: string) => ReturnType
+
+      /**
+       * Replace the active text selection with a [[Wiki-Link]] node.
+       * Used by the bubble menu "Link" button to wrap highlighted text.
+       */
+      setWikiLink: (title: string) => ReturnType
     }
   }
 }
@@ -95,6 +101,17 @@ export const WikiLink = Node.create<WikiLinkOptions>({
   addCommands() {
     return {
       insertWikiLink:
+        (title: string) =>
+        ({ commands }) => {
+          return commands.insertContent({
+            type: this.name,
+            attrs: { title },
+          })
+        },
+      // Replaces whatever is currently selected with a wikiLink node.
+      // `insertContent` targets the active selection, so a highlighted
+      // text run is wrapped as-is by the bubble menu's "Link" button.
+      setWikiLink:
         (title: string) =>
         ({ commands }) => {
           return commands.insertContent({
