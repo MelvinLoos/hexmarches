@@ -9,9 +9,10 @@
 
 import { Node } from '@tiptap/core'
 import { Suggestion } from '@tiptap/suggestion'
-import { VueRenderer } from '@tiptap/vue-3'
+import { VueNodeViewRenderer, VueRenderer } from '@tiptap/vue-3'
 import { useWikiService } from '~/composables/useWikiService'
 import type { WikiNodeSearchResult } from '~/src/core/domain/wiki-repository'
+import WikiLinkNodeView from '~/src/presentation/tiptap/nodes/WikiLinkNodeView.vue'
 import WikiLinkSuggestion from '~/src/presentation/tiptap/suggestions/WikiLinkSuggestion.vue'
 
 export interface WikiLinkOptions {
@@ -81,6 +82,14 @@ export const WikiLink = Node.create<WikiLinkOptions>({
       },
       `[[${HTMLAttributes['data-title'] || ''}]]`,
     ]
+  },
+
+  // The editor viewport (WYSIWYG) renders the node with a real Vue
+  // component (WikiLinkNodeView) instead of raw "[[Title]]" text.
+  // renderHTML is intentionally preserved: it remains the serialization
+  // path for getHTML(), clipboard copies, and any headless/SSR render.
+  addNodeView() {
+    return VueNodeViewRenderer(WikiLinkNodeView)
   },
 
   addCommands() {

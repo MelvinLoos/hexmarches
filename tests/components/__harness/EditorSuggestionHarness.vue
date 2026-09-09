@@ -16,10 +16,11 @@ import EditorSlash from '~/src/presentation/components/editor/EditorSlash.vue'
 // the live editor instance to the test via the onEditor prop.
 const props = defineProps<{
   onEditor?: (editor: any) => void
+  initialContent?: string
 }>()
 
 const editor = useEditor({
-  content: '',
+  content: props.initialContent ?? '',
   extensions: getEditorExtensions(),
   onUpdate: () => {},
 })
