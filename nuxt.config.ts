@@ -3,6 +3,17 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-09-05',
   devtools: { enabled: true },
 
+  // ── Global CSS (Tailwind) ──────────────────────────────────────
+  css: ['~/assets/css/tailwind.css'],
+
+  // ── PostCSS plugins (must be explicit for Tailwind to compile) ──
+  postcss: {
+    plugins: {
+      tailwindcss: {},
+      autoprefixer: {},
+    },
+  },
+
   modules: [
     '@nuxtjs/supabase',
     '@nuxtjs/mdc',

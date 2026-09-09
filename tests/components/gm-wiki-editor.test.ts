@@ -1,73 +1,32 @@
 import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { defineComponent, h } from 'vue'
-vi.mock('#imports', () => ({ useSupabaseClient: () => ({}) }))
-vi.mock('~/composables/useAssetUpload', () => ({ useAssetUpload: () => ({ uploadAsset: vi.fn(), uploading: { value: false }, error: { value: null }, lastUploadedUrl: { value: null } }) }))
 import GmWikiEditor from '~/src/presentation/components/GmWikiEditor.client.vue'
 import type { WikiNode } from '~/src/core/domain/wiki-node'
 
-// ── Mock TipTap vue-3 ───────────────────────────────────────────
-vi.mock('@tiptap/vue-3', () => ({
-  EditorContent: defineComponent({
-    name: 'EditorContent',
-    props: { editor: Object },
-    setup() {
-      return () => h('div', { 'data-testid': 'tiptap-editor', class: 'ProseMirror' })
-    },
-  }),
-  BubbleMenu: defineComponent({
-    name: 'BubbleMenu',
-    props: { editor: Object },
-    setup(_, { slots }) { return () => slots.default ? slots.default() : null },
-  }),
-  FloatingMenu: defineComponent({
-    name: 'FloatingMenu',
-    props: { editor: Object },
-    setup(_, { slots }) { return () => slots.default ? slots.default() : null },
-  }),
-}))
-
-// ── Mock editor-setup ───────────────────────────────────────────
-const { useEditorMock } = vi.hoisted(() => ({ useEditorMock: vi.fn() }))
-vi.mock('~/src/presentation/tiptap/editor-setup', () => ({
-  createEditor: useEditorMock,
-}))
-
-// ── Mock TipTap extensions ──────────────────────────────────────
+vi.mock('@vueuse/core', () => ({ useDebounceFn: (fn: Function) => fn, onClickOutside: () => {} }))
+vi.mock('~/composables/useWikiService', () => ({ useWikiService: () => ({ searchNodes: vi.fn().mockResolvedValue([]), getInboundReferences: vi.fn().mockResolvedValue([]), findInboundReferences: vi.fn().mockResolvedValue([]) }) }))
+vi.mock('~/composables/useCommandPalette', () => ({ useCommandPalette: () => ({ open: vi.fn() }) }))
+vi.mock('#imports', () => ({ useSupabaseClient: () => ({}) }))
+vi.mock('~/composables/useAssetUpload', () => ({ useAssetUpload: () => ({ uploadAsset: vi.fn(), uploading: { value: false }, error: { value: null } }) }))
+vi.mock('~/src/presentation/components/editor/EditorBubble.vue', () => ({ default: { name: 'EditorBubble', props: ['editor'], template: '<div></div>' } }))
+vi.mock('~/src/presentation/components/editor/EditorSlash.vue', () => ({ default: { name: 'EditorSlash', props: ['editor'], template: '<div></div>' } }))
+vi.mock('~/src/presentation/tiptap/editor-setup', () => ({ getEditorExtensions: () => [] }))
 vi.mock('@tiptap/starter-kit', () => ({ default: { name: 'starterKit', type: 'extension' } }))
-vi.mock('@tiptap/extension-bubble-menu', () => ({ default: { name: 'bubbleMenu', type: 'extension' } }))
-vi.mock('@tiptap/extension-floating-menu', () => ({ default: { name: 'floatingMenu', type: 'extension' } }))
 vi.mock('@tiptap/extension-image', () => ({ default: { name: 'image', type: 'extension' } }))
-vi.mock('@tiptap/core', () => ({
-  Extension: { create: (c: any) => ({ ...c, type: 'extension' }) },
-  Node: { create: (c: any) => ({ ...c, type: 'node' }) },
-  Mark: { create: (c: any) => ({ ...c, type: 'mark' }) },
-}))
+vi.mock('@tiptap/core', () => ({ Extension: { create: (c: any) => ({ ...c, type: 'extension' }) }, Node: { create: (c: any) => ({ ...c, type: 'node' }) }, Mark: { create: (c: any) => ({ ...c, type: 'mark' }) } }))
 
-// ── Mock useWikiService ──────────────────────────────────────────
-vi.mock('~/composables/useWikiService', () => ({
-  useWikiService: () => ({
-    searchNodes: vi.fn().mockResolvedValue([]),
-    getInboundReferences: vi.fn().mockResolvedValue([]),
-    findInboundReferences: vi.fn().mockResolvedValue([]),
-  }),
-}))
+const { editorBox } = vi.hoisted(() => ({ editorBox: { value: null as any } }))
 
-// ── Mock CommandPalette ─────────────────────────────────────────
-vi.mock('~/composables/useCommandPalette', () => ({
-  useCommandPalette: () => ({ open: vi.fn() }),
-}))
-
-// ── Mock @vueuse/core ───────────────────────────────────────────
-vi.mock('@vueuse/core', () => ({
-  useDebounceFn: (fn: Function) => fn,
-  onClickOutside: () => {},
+vi.mock('@tiptap/vue-3', () => ({
+  EditorContent: defineComponent({ name: 'EditorContent', props: { editor: Object }, setup: () => () => h('div', { 'data-testid': 'tiptap-editor', class: 'ProseMirror' }) }),
+  useEditor: vi.fn(() => editorBox),
 }))
 
 function makeMockEditor() {
   return {
     storage: { markdown: { getMarkdown: vi.fn(() => '') } },
-    commands: { insertContent: vi.fn(), setContent: vi.fn() },
+    commands: { insertContent: vi.fn(), setContent: vi.fn(), setImage: vi.fn() },
     chain: () => ({ focus: () => ({ run: vi.fn() }) }),
     isActive: vi.fn().mockReturnValue(false),
     getHTML: vi.fn().mockReturnValue(''),
@@ -82,12 +41,10 @@ function makeMockEditor() {
 
 const mockFolders: WikiNode[] = [
   { id: '1', title: 'Locations', content: '', path: 'locations', createdAt: new Date(), updatedAt: new Date() },
-  { id: '2', title: 'Factions', content: '', path: 'factions', createdAt: new Date(), updatedAt: new Date() },
-  { id: '3', title: 'Dark Forest', content: '# Forest', path: 'locations.forest', createdAt: new Date(), updatedAt: new Date() },
 ]
 
 function mountComponent(overrides: Record<string, unknown> = {}) {
-  useEditorMock.mockReturnValue(makeMockEditor())
+  editorBox.value = makeMockEditor()
   return mount(GmWikiEditor, { props: {
     initialTitle: (overrides.initialTitle as string) ?? '',
     initialContent: (overrides.initialContent as string) ?? '',
@@ -103,57 +60,51 @@ describe('GmWikiEditor.vue — Core UI', () => {
   it('renders TipTap editor', () => expect(mountComponent().find('[data-testid="tiptap-editor"]').exists()).toBe(true))
   it('renders title input', () => expect(mountComponent().find('[data-testid="wiki-title"]').exists()).toBe(true))
   it('renders save button', () => expect(mountComponent().find('[data-testid="wiki-save"]').exists()).toBe(true))
-  it('renders entity type selector', () => expect(mountComponent().find('[data-testid="wiki-entity-type"]').exists()).toBe(true))
-  it('renders parent folder selector', () => expect(mountComponent().find('[data-testid="wiki-parent"]').exists()).toBe(true))
+  it('renders entity type', () => expect(mountComponent().find('[data-testid="wiki-entity-type"]').exists()).toBe(true))
+  it('renders parent selector', () => expect(mountComponent().find('[data-testid="wiki-parent"]').exists()).toBe(true))
   it('renders raw mode toggle', () => expect(mountComponent().find('[data-testid="raw-mode-toggle"]').exists()).toBe(true))
 
-  it('shows path preview when title is set', async () => {
+  it('shows path preview when title set', async () => {
     const w = mountComponent({ parentOptions: mockFolders, initialTitle: 'Dark Forest' })
-    // Path preview uses generatedPath computed; needs title to be filled
-    const titleInput = w.find('[data-testid="wiki-title"]')
-    await titleInput.setValue('Dark Forest')
+    const t = w.find('[data-testid="wiki-title"]')
+    await t.setValue('Dark Forest')
     expect(w.find('[data-testid="wiki-path-preview"]').exists()).toBe(true)
   })
 
-  it('shows title error when saving with empty title', async () => {
+  it('shows title error on empty save', async () => {
     const w = mountComponent({ initialTitle: '' })
     await w.find('[data-testid="wiki-save"]').trigger('click')
     await w.vm.$nextTick()
     expect(w.find('[data-testid="wiki-title-error"]').exists()).toBe(true)
   })
 
-  it('emits save with correct payload', async () => {
+  it('emits save with payload', async () => {
     const w = mountComponent({ initialTitle: 'Test', initialContent: '# Hello' })
-    const titleInput = w.find('[data-testid="wiki-title"]')
-    await titleInput.setValue('Test')
     await w.find('[data-testid="wiki-save"]').trigger('click')
     await w.vm.$nextTick()
-    const emitted = w.emitted('save')
-    expect(emitted).toBeTruthy()
-    if (emitted) {
-      expect(emitted[0][0]).toMatchObject({ title: 'Test', content: '# Hello' })
-    }
+    const e = w.emitted('save')
+    expect(e).toBeTruthy()
+    if (e) expect(e[0][0]).toMatchObject({ title: 'Test', content: '# Hello' })
   })
 
-  it('renders cover image dropzone', () => {
+  it('renders cover dropzone', () => {
     expect(mountComponent().find('[data-testid="wiki-cover-dropzone"]').exists()).toBe(true)
   })
 })
 
 describe('GmWikiEditor.vue — Raw Mode', () => {
-  it('toggles to raw mode showing textarea', async () => {
-    const w = mountComponent({ initialContent: '# Raw test' })
+  it('toggles to raw showing textarea', async () => {
+    const w = mountComponent({ initialContent: '# Raw' })
     await w.find('[data-testid="raw-mode-toggle"]').trigger('click')
     await w.vm.$nextTick()
     expect(w.find('[data-testid="raw-markdown-textarea"]').exists()).toBe(true)
   })
 
-  it('shows markdown content in raw textarea', async () => {
+  it('shows markdown in raw textarea', async () => {
     const content = '# Hello World'
     const w = mountComponent({ initialContent: content })
     await w.find('[data-testid="raw-mode-toggle"]').trigger('click')
     await w.vm.$nextTick()
-    const textarea = w.find('[data-testid="raw-markdown-textarea"]')
-    expect((textarea.element as HTMLTextAreaElement).value).toBe(content)
+    expect((w.find('[data-testid="raw-markdown-textarea"]').element as HTMLTextAreaElement).value).toBe(content)
   })
 })

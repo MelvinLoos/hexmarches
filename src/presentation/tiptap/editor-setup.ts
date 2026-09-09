@@ -1,31 +1,24 @@
-// ─── TipTap Editor Factory ─────────────────────────────────────
-// Creates a TipTap Editor instance directly (not via composable)
-// so it can be called multiple times for raw-mode toggle reinit.
+// ─── TipTap Editor Configuration ──────────────────────────────
+// Exports the extensions array and Markdown config for use with
+// @tiptap/vue-3's `useEditor()` composable.
+// The composable handles lifecycle (onMounted/onBeforeUnmount).
 
-import { Editor } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
 import { Markdown } from 'tiptap-markdown'
-import { BubbleMenu } from '@tiptap/extension-bubble-menu'
-import { FloatingMenu } from '@tiptap/extension-floating-menu'
 import Image from '@tiptap/extension-image'
 import { WikiLink } from './extensions/WikiLink'
 import { GmSecret } from './extensions/GmSecret'
 import type { Extensions } from '@tiptap/core'
 
-export interface CreateEditorOptions {
-  content: string
-  element: Element
-  onUpdate?: (markdown: string) => void
+export interface EditorConfigOptions {
+  extraExtensions?: Extensions
 }
 
 /**
- * Creates a new TipTap Editor instance with standard extensions.
- * Returns the Editor directly — caller owns lifecycle (destroy).
+ * Returns the standard extensions array for our TipTap editor.
  */
-export function createEditor(options: CreateEditorOptions): Editor {
-  const { content, element, onUpdate } = options
-
-  const extensions: Extensions = [
+export function getEditorExtensions(opts?: EditorConfigOptions): Extensions {
+  const core: Extensions = [
     StarterKit,
     Markdown.configure({
       html: false,
@@ -34,24 +27,14 @@ export function createEditor(options: CreateEditorOptions): Editor {
       transformPastedText: true,
       transformCopiedText: false,
     }),
-    BubbleMenu,
-    FloatingMenu,
     Image,
     WikiLink,
     GmSecret,
   ]
 
-  const editor = new Editor({
-    element,
-    content,
-    extensions,
-    onUpdate: ({ editor: ed }) => {
-      if (onUpdate) {
-        const markdown = ed.storage.markdown?.getMarkdown?.() ?? ''
-        onUpdate(markdown)
-      }
-    },
-  })
+  if (opts?.extraExtensions) {
+    return [...core, ...opts.extraExtensions]
+  }
 
-  return editor
+  return core
 }

@@ -1,4 +1,5 @@
 <template>
+
   <div class="gm-wiki-editor">
     <!-- Title -->
     <div class="editor-field">
@@ -90,7 +91,7 @@
     </div>
 
     <!-- Editor: WYSIWYG (TipTap) or Raw (textarea) -->
-    <div v-if="!isRawMode && editor" data-testid="tiptap-editor" class="editor-wrapper tiptap-editor-wrapper" @dragover.prevent @drop.prevent="handleEditorDrop">
+    <div v-if="!isRawMode && editor" :key="editorKey" data-testid="tiptap-editor" class="editor-wrapper tiptap-editor-wrapper" @dragover.prevent @drop.prevent="handleEditorDrop">
       <EditorBubble v-if="editor" :editor="editor" />
       <EditorSlash v-if="editor" :editor="editor" />
       <EditorContent :editor="editor" class="tiptap-content" />
@@ -135,15 +136,18 @@
       Save
     </button>
   </div>
+
 </template>
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick, shallowRef } from 'vue'
-import { EditorContent } from '@tiptap/vue-3'
+import { ref, computed, watch, onMounted, nextTick } from 'vue'
+import { EditorContent, useEditor } from '@tiptap/vue-3'
 import { useDebounceFn, onClickOutside } from '@vueuse/core'
 import { useWikiService } from '~/composables/useWikiService'
 import { useCommandPalette } from '~/composables/useCommandPalette'
-import { createEditor } from '~/src/presentation/tiptap/editor-setup'
-import { useAssetUpload } from "~/composables/useAssetUpload"
+import { getEditorExtensions } from '~/src/presentation/tiptap/editor-setup'
+import { useAssetUpload } from '~/composables/useAssetUpload'
+import EditorBubble from '~/src/presentation/components/editor/EditorBubble.vue'
+import EditorSlash from '~/src/presentation/components/editor/EditorSlash.vue'
 import type { Editor } from '@tiptap/core'
 import type { WikiNode } from '~/src/core/domain/wiki-node'
 import { generateChildPath, WikiNodeType } from '~/src/core/domain/wiki-node'
@@ -165,7 +169,7 @@ const emit = defineEmits<{
 
 const entityTypeOptions = Object.values(WikiNodeType)
 
-// ── Form state ──────────────────────────────────────────────────
+// ── Form state ─────────────────────────────────────────────────
 const title = ref(props.initialTitle ?? '')
 const coverImageUrl = ref(props.initialCoverImageUrl ?? '')
 const entityType = ref(props.initialEntityType || WikiNodeType.GENERAL)
@@ -174,39 +178,26 @@ const dragOver = ref(false)
 const coverUploading = ref(false)
 const selectedParent = ref(extractParentPath(props.initialPath ?? ''))
 
-// ── Raw mode ────────────────────────────────────────────────────
+// ── Raw mode ───────────────────────────────────────────────────
 const isRawMode = ref(false)
 const rawMarkdown = ref(props.initialContent ?? '')
 const currentMarkdown = ref(props.initialContent ?? '')
+// Force re-mount of editor-wrapper when toggling back from raw mode
+const editorKey = ref(0)
 
-// ── TipTap editor ───────────────────────────────────────────────
-const editor = shallowRef<Editor | null>(null)
-
-function initEditor(content: string) {
-  if (editor.value) {
-    editor.value.destroy()
-    editor.value = null
-  }
-  const ed = createEditor({
-    content,
-    onUpdate: (md: string) => {
-      currentMarkdown.value = md
-    },
-  })
-  editor.value = ed
-}
-
-// Initial creation
-initEditor(props.initialContent ?? '')
-
-// Cleanup on unmount
-onBeforeUnmount(() => {
-  if (editor.value) {
-    editor.value.destroy()
-  }
+// ── TipTap editor ──────────────────────────────────────────────
+// useEditor() creates the Editor in onMounted (after DOM exists)
+// and destroys it in onBeforeUnmount. It returns a ShallowRef<Editor>.
+const editor = useEditor({
+  content: props.initialContent ?? '',
+  extensions: getEditorExtensions(),
+  onUpdate: ({ editor: ed }) => {
+    const md = (ed as any).storage?.markdown?.getMarkdown?.() ?? ''
+    currentMarkdown.value = md
+  },
 })
 
-// ── Wiki-Link Autocomplete State ────────────────────────────────
+// ── Wiki-Link Autocomplete State ───────────────────────────────
 const wikiService = useWikiService()
 const commandPalette = useCommandPalette()
 const showAutocomplete = ref(false)
@@ -223,15 +214,10 @@ function extractAutocompleteQuery(text: string): string | null {
 }
 
 function injectWikilink(title: string) {
-  if (insertMode.value) {
-    const ed = editor.value
-    if (ed) {
-      ed.commands.insertContent(`[[${title}]]`)
-    } else {
-      const sep = currentMarkdown.value && !currentMarkdown.value.endsWith('\\n') ? ' ' : ''
-      currentMarkdown.value = currentMarkdown.value + sep + `[[${title}]]`
-    }
-  } else {
+  const ed = editor.value
+  if (insertMode.value && ed) {
+    ed.commands.insertContent(`[[${title}]]`)
+  } else if (!insertMode.value) {
     const match = currentMarkdown.value.match(wikilinkOpenRe)
     if (!match) return
     const before = currentMarkdown.value.slice(0, match.index!)
@@ -276,8 +262,10 @@ function closeAutocomplete() {
 onClickOutside(picklistRef, () => closeAutocomplete())
 
 onMounted(() => {
-  if (editor.value) {
-    editor.value.on('keydown', ({ event }: { event: KeyboardEvent }) => {
+  // Key binding runs once editor is mounted
+  const ed = editor.value
+  if (ed) {
+    ed.on('keydown', ({ event }: { event: KeyboardEvent }) => {
       if (event.ctrlKey && event.shiftKey && event.key === 'K') {
         event.preventDefault()
         commandPalette.open()
@@ -306,7 +294,7 @@ function selectAutocompleteItem(title: string) {
   injectWikilink(title)
 }
 
-// ── Folder / Path logic ─────────────────────────────────────────
+// ── Folder / Path logic ────────────────────────────────────────
 const folderOptions = computed(() => props.parentOptions ?? [])
 
 const generatedPath = computed(() => {
@@ -321,7 +309,7 @@ function extractParentPath(fullPath: string): string {
   return parts.slice(0, -1).join('.')
 }
 
-// ── Cover image handling ────────────────────────────────────────
+// ── Cover image handling ───────────────────────────────────────
 function handleCoverFileSelect(event: Event) {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
@@ -345,27 +333,8 @@ function uploadCoverFile(file: File) {
   })
 }
 
-// ── Raw mode toggle ─────────────────────────────────────────────
-function toggleRawMode() {
-  if (!isRawMode.value) {
-    // Switching TO raw mode: capture current markdown, destroy editor
-    rawMarkdown.value = currentMarkdown.value
-    if (editor.value) {
-      editor.value.destroy()
-      editor.value = null
-    }
-    isRawMode.value = true
-  } else {
-    // Switching FROM raw mode: recreate editor with raw markdown
-    isRawMode.value = false
-    nextTick(() => {
-      initEditor(rawMarkdown.value)
-    })
-  }
-}
-
-// ── Editor drag/drop asset upload ─────────────────────────────────
-const { uploadAsset: uploadEditorAsset, uploading: editorUploading, error: editorUploadError } = useAssetUpload()
+// ── Editor drag/drop asset upload ──────────────────────────────
+const { uploadAsset: uploadEditorAsset, uploading: editorUploading } = useAssetUpload()
 
 async function handleEditorDrop(event: DragEvent) {
   if (!editor.value) return
@@ -375,7 +344,6 @@ async function handleEditorDrop(event: DragEvent) {
   for (let i = 0; i < files.length; i++) {
     const file = files[i]
     if (!file.type.startsWith('image/')) continue
-
     try {
       const url = await uploadEditorAsset(file)
       if (url) {
@@ -387,7 +355,26 @@ async function handleEditorDrop(event: DragEvent) {
   }
 }
 
-// ── Save ────────────────────────────────────────────────────────
+// ── Raw mode toggle ────────────────────────────────────────────
+function toggleRawMode() {
+  if (!isRawMode.value) {
+    rawMarkdown.value = currentMarkdown.value
+    isRawMode.value = true
+  } else {
+    isRawMode.value = false
+    // Force editor re-creation when returning from raw mode
+    // useEditor will reconstruct on next render tick with fresh content
+    editorKey.value++
+    nextTick(() => {
+      // Inject raw markdown into the newly created editor
+      if (editor.value) {
+        editor.value.commands.setContent(rawMarkdown.value)
+      }
+    })
+  }
+}
+
+// ── Save ───────────────────────────────────────────────────────
 function handleSave() {
   titleError.value = ''
   if (!title.value.trim()) {
