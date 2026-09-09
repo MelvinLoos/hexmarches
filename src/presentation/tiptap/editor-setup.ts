@@ -8,6 +8,8 @@ import { Markdown } from 'tiptap-markdown'
 import { BubbleMenu } from '@tiptap/extension-bubble-menu'
 import { FloatingMenu } from '@tiptap/extension-floating-menu'
 import Image from '@tiptap/extension-image'
+import { WikiLink } from './extensions/WikiLink'
+import { GmSecret } from './extensions/GmSecret'
 import type { Extensions } from '@tiptap/core'
 
 export interface CreateEditorOptions {
@@ -35,6 +37,8 @@ export function createEditor(options: CreateEditorOptions): Editor {
     BubbleMenu,
     FloatingMenu,
     Image,
+    WikiLink,
+    GmSecret,
   ]
 
   const editor = new Editor({
