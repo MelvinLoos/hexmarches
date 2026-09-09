@@ -53,6 +53,8 @@ vi.mock('@tiptap/core', () => ({
   Mark: { create: (c: any) => ({ ...c, type: 'mark' }) },
 }))
 
+vi.mock('#imports', () => ({ useSupabaseClient: () => ({}) }))
+vi.mock('~/composables/useAssetUpload', () => ({ useAssetUpload: () => ({ uploadAsset: vi.fn(), uploading: { value: false }, error: { value: null }, lastUploadedUrl: { value: null } }) }))
 import GmWikiEditor from '~/src/presentation/components/GmWikiEditor.client.vue'
 import type { WikiNode } from '~/src/core/domain/wiki-node'
 

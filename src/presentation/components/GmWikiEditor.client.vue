@@ -90,7 +90,7 @@
     </div>
 
     <!-- Editor: WYSIWYG (TipTap) or Raw (textarea) -->
-    <div v-if="!isRawMode && editor" data-testid="tiptap-editor" class="editor-wrapper tiptap-editor-wrapper">
+    <div v-if="!isRawMode && editor" data-testid="tiptap-editor" class="editor-wrapper tiptap-editor-wrapper" @dragover.prevent @drop.prevent="handleEditorDrop">
       <EditorBubble v-if="editor" :editor="editor" />
       <EditorSlash v-if="editor" :editor="editor" />
       <EditorContent :editor="editor" class="tiptap-content" />
@@ -143,8 +143,7 @@ import { useDebounceFn, onClickOutside } from '@vueuse/core'
 import { useWikiService } from '~/composables/useWikiService'
 import { useCommandPalette } from '~/composables/useCommandPalette'
 import { createEditor } from '~/src/presentation/tiptap/editor-setup'
-import EditorBubble from "~/src/presentation/components/editor/EditorBubble.vue"
-import EditorSlash from "~/src/presentation/components/editor/EditorSlash.vue"
+import { useAssetUpload } from "~/composables/useAssetUpload"
 import type { Editor } from '@tiptap/core'
 import type { WikiNode } from '~/src/core/domain/wiki-node'
 import { generateChildPath, WikiNodeType } from '~/src/core/domain/wiki-node'
@@ -362,6 +361,29 @@ function toggleRawMode() {
     nextTick(() => {
       initEditor(rawMarkdown.value)
     })
+  }
+}
+
+// ── Editor drag/drop asset upload ─────────────────────────────────
+const { uploadAsset: uploadEditorAsset, uploading: editorUploading, error: editorUploadError } = useAssetUpload()
+
+async function handleEditorDrop(event: DragEvent) {
+  if (!editor.value) return
+  const files = event.dataTransfer?.files
+  if (!files || files.length === 0) return
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i]
+    if (!file.type.startsWith('image/')) continue
+
+    try {
+      const url = await uploadEditorAsset(file)
+      if (url) {
+        editor.value.commands.setImage({ src: url, alt: file.name })
+      }
+    } catch {
+      // Error handled by useAssetUpload state
+    }
   }
 }
 
